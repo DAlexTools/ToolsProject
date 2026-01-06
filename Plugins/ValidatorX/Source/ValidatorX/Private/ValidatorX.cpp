@@ -1,11 +1,13 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ValidatorX.h"
 #include "ValidatorXManager.h"
 #include "Widgets/SValidatorWidget.h"
 #include "EditorValidatorSubsystem.h"
-
+#include "WorkspaceMenuStructure.h"
+#include "WorkspaceMenuStructureModule.h"
 #include "Layout/WidgetPath.h"
+
 DEFINE_LOG_CATEGORY_STATIC(LogValidatorX, All, All);
 
 #define LOCTEXT_NAMESPACE "FValidatorXModule"
@@ -19,16 +21,18 @@ void FValidatorXModule::StartupModule()
 	// add the File->DataValidation menu subsection
 	UToolMenus::Get()->RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FValidatorXModule::RegisterMenus));
 
-	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(ValidatorXTabName, FOnSpawnTab::CreateRaw(this, &FValidatorXModule::OnSpawnValidatorXTab))
-     .SetDisplayName(NSLOCTEXT("ValidatorX", "TabTitle", "ValidatorX"))
-     .SetMenuType(ETabSpawnerMenuType::Hidden);
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(ValidatorXTabName, FOnSpawnTab::CreateRaw(this, &FValidatorXModule::OnSpawnValidatorXTab)) //
+		.SetDisplayName(LOCTEXT("TabTitle", "ValidatorX"))																						 //
+		.SetGroup(WorkspaceMenu::GetMenuStructure().GetToolsCategory())																			 //
+		.SetIcon(FSlateIcon(FName("EditorStyle"), "Icons.Validate"))																			 //
+		.SetMenuType(ETabSpawnerMenuType::Enabled);																								 //
 }
 
 void FValidatorXModule::RegisterMenus()
 {
-	if(!IsRunningCommandlet() && !IsRunningGame() && FSlateApplication::IsInitialized())
+	if (!IsRunningCommandlet() && !IsRunningGame() && FSlateApplication::IsInitialized())
 	{
-		UToolMenu* Menu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
+		UToolMenu* const  Menu = UToolMenus::Get()->ExtendMenu("LevelEditor.MainMenu.Tools");
 		FToolMenuSection& Section = Menu->FindOrAddSection("DataValidation");
 		Section.AddEntry(FToolMenuEntry::InitMenuEntry(
 			"ValidatorX",
@@ -47,7 +51,7 @@ void FValidatorXModule::ShutdownModule()
 
 ETabSpawnerMenuType::Type FValidatorXModule::GetVisibleModule() const
 {
-	if(FModuleManager::Get().IsModuleLoaded("ToolProjectEditor"))
+	if (FModuleManager::Get().IsModuleLoaded("ToolProjectEditor"))
 	{
 		ETabSpawnerMenuType::Enabled;
 	}
@@ -56,25 +60,15 @@ ETabSpawnerMenuType::Type FValidatorXModule::GetVisibleModule() const
 
 void FValidatorXModule::HandlePostEngineInit()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Startup Begin"));
-
-	if(GEditor)
+	if (GEditor)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("GEditor is valid"));
-
 		UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
-		if(ValidatorSubsystem)
+		if (ValidatorSubsystem)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("ValidatorSubsystem is valid"));
-
 			ValidatorSubsystem->ForEachEnabledValidator(
-				[this] (UEditorValidatorBase* Validator)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("Validator found: %s"), *Validator->GetName());
-
-					if(UBlueprintValidatorBase* BlueprintValidator = Cast<UBlueprintValidatorBase>(Validator))
+				[this](UEditorValidatorBase* Validator) {
+					if (UBlueprintValidatorBase* const BlueprintValidator = Cast<UBlueprintValidatorBase>(Validator))
 					{
-						UE_LOG(LogTemp, Warning, TEXT("Registering BlueprintValidator: %s"), *BlueprintValidator->GetName());
 						FValidatorXManager::Get().RegisterValidator(BlueprintValidator);
 						BlueprintValidator->SetValidationEnabled(false);
 					}
@@ -87,22 +81,22 @@ void FValidatorXModule::HandlePostEngineInit()
 		}
 	}
 }
-
+/* clang-format off */
 TSharedRef<SDockTab> FValidatorXModule::OnSpawnValidatorXTab(const FSpawnTabArgs& Args)
 {
 	return SNew(SDockTab)
-		.TabRole(ETabRole::NomadTab)
-		[
-			SNew(SValidatorWidget)
-			.Validators(FValidatorXManager::Get().GetValidators())
-		];
+			.TabRole(ETabRole::NomadTab)
+			[
+				SNew(SValidatorWidget)
+				.Validators(FValidatorXManager::Get().GetValidators())
+			];
 }
-
+/* clang-format on */
 void FValidatorXModule::OpenManagerTab()
 {
 	FGlobalTabmanager::Get()->TryInvokeTab(ValidatorXTabName);
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FValidatorXModule, ValidatorX)
