@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -44,8 +44,9 @@ public class ValidatorX : ModuleRules
 				"LevelEditor",
 				"InputCore",
 				"ToolMenus",
-				"AssetRegistry"
-			}
+				"AssetRegistry",
+                "WorkspaceMenuStructure",
+            }
 			);
 		
 		
