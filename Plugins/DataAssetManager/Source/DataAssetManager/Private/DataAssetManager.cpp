@@ -78,25 +78,6 @@ TSharedRef<SDockTab> FDataAssetManagerModule::CreateDataAssetManagerTab(const FS
 	return DataAssetManagerTab;
 }
 /* clang-format on */
-void FDataAssetManagerModule::ModifyMenus()
-{
-	if (UToolMenu* Menu = UToolMenus::Get()->FindMenu("LevelEditor.MainMenu.File"))
-	{
-		if (FToolMenuSection* Section = Menu->FindSection("FileLoadAndSave"))
-		{
-			if (FToolMenuEntry* Entry = Section->FindEntry("Delete"))
-			{
-				FUIAction HiddenAction(
-					FExecuteAction(),
-					FCanExecuteAction(),
-					FIsActionChecked(),
-					FIsActionButtonVisible::CreateLambda([]() { return false; }));
-
-				Entry->SetCommandList(nullptr);
-			}
-		}
-	}
-}
 
 void FDataAssetManagerModule::RestartWidget()
 {

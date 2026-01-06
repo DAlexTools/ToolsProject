@@ -70,6 +70,4 @@ private:
 	
 	/// Main widget instance for Data Asset management UI
 	TSharedPtr<SDataAssetManagerWidget> DataAssetWidget;
-
-	void ModifyMenus();
 };
