@@ -771,16 +771,40 @@ struct FColumnData final
 
 DEFINE_LOG_CATEGORY_STATIC(SDataAssetManagerScopeLog, Log, All);
 
+/**
+ * @brief A simple scope-based timer for measuring execution time of a code block.
+ *
+ * This struct starts timing upon construction and logs the elapsed time when it is destroyed.
+ * Useful for profiling sections of code in Unreal Engine projects.
+ */
 struct FScopeTimer
 {
+	/**
+	 * @brief A descriptive name for the scope being measured.
+	 */
 	const TCHAR* Description;
+
+	/**
+	 * @brief The time (in seconds) when the timer was started.
+	 */
 	double StartTime;
 
-	explicit FScopeTimer(const TCHAR* InDescription) : Description(InDescription)
+	/**
+	 * @brief Constructs a new FScopeTimer and starts measuring time.
+	 *
+	 * @param InDescription A human-readable description of the scope being timed.
+	 */
+	explicit FScopeTimer(const TCHAR* InDescription)
+		: Description(InDescription)
 	{
 		StartTime = FPlatformTime::Seconds();
 	}
 
+	/**
+	 * @brief Destructor that stops the timer and logs the elapsed time.
+	 *
+	 * Logs the execution duration using UE_LOG with the given Description.
+	 */
 	~FScopeTimer()
 	{
 		double EndTime = FPlatformTime::Seconds();
@@ -788,6 +812,14 @@ struct FScopeTimer
 	}
 };
 
+/**
+ * @brief Macro to create a scope timer with a given description.
+ *
+ * This macro instantiates an FScopeTimer with a unique name based on the current line number.
+ * When the scope ends, the timer will automatically log the elapsed time.
+ *
+ * @param Description A string describing the scope being measured.
+ */
 #define MEASURE_SCOPE(Description) FScopeTimer Timer_##__LINE__(TEXT(Description))
 
 #undef LOCTEXT_NAMESPACE
