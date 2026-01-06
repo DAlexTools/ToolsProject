@@ -10,21 +10,20 @@ class FMenuBuilder;
 class SDeveloperSettingsWidget;
 class SDataAssetManagerWidget;
 
-/* clang-format off */
 
 /**
  * Interface for the Data Asset Manager module.
  * Defines the core API contract for plugin functionality.
  */
-class IDataAssetManagerModule : public IModuleInterface 
+class IDataAssetManagerModule : public IModuleInterface
 {
 public:
-  /**
-   * Opens or brings focus to the Data Asset Manager tab
-   * @note Pure virtual function must be implemented by derived class
-   */
-  virtual void OpenManagerTab() = 0;
-  virtual void RestartWidget() = 0;
+	/**
+	 * Opens or brings focus to the Data Asset Manager tab
+	 * @note Pure virtual function must be implemented by derived class
+	 */
+	virtual void OpenManagerTab() = 0;
+	virtual void RestartWidget() = 0;
 };
 
 /**
@@ -55,7 +54,6 @@ public:
 	 */
 	// static const FName DataAssetManagerTabName;
 private:
-
 	ETabSpawnerMenuType::Type GetVisibleModule() const;
 
 	/**
@@ -64,10 +62,10 @@ private:
 	 * @return Configured SDockTab instance
 	 */
 	TSharedRef<SDockTab> CreateDataAssetManagerTab(const FSpawnTabArgs& Args);
-	
+
 	/// Widget for developer settings UI (optional component)
 	TSharedPtr<SDeveloperSettingsWidget> DeveloperSettingsWidget;
-	
+
 	/// Main widget instance for Data Asset management UI
 	TSharedPtr<SDataAssetManagerWidget> DataAssetWidget;
 };

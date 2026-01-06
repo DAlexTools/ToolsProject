@@ -27,8 +27,6 @@ void FDataAssetManagerModule::StartupModule()
 		.SetIcon(FSlateIcon(FName("EditorStyle"), "ClassIcon.DataAsset"))																											//
 		.SetMenuType(ETabSpawnerMenuType::Enabled);																																	//
 
-	UToolMenus::RegisterStartupCallback(
-		FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FDataAssetManagerModule::ModifyMenus));
 }
 
 void FDataAssetManagerModule::ShutdownModule()
