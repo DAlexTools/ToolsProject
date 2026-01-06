@@ -16,13 +16,12 @@
 
 #define LOCTEXT_NAMESPACE "SDataAssetManagerWidget"
 
-
 namespace DataAssetManager
 {
 	constexpr float TabReopenDelaySeconds = 1.0f;
-	const FName ToolProjectEditor(TEXT("ToolProjectEditor"));
-	const FName StatusBarName(TEXT("DataAssetManagerStatusBar"));
-	const FName DataAssetManagerTabName(TEXT("DataAssetManager"));
+	const FName		ToolProjectEditor(TEXT("ToolProjectEditor"));
+	const FName		StatusBarName(TEXT("DataAssetManagerStatusBar"));
+	const FName		DataAssetManagerTabName(TEXT("DataAssetManager"));
 
 	namespace ModuleName
 	{
@@ -34,31 +33,31 @@ namespace DataAssetManager
 		constexpr const TCHAR* OutputLog = TEXT("OutputLog");
 		constexpr const TCHAR* Settings = TEXT("Settings");
 		constexpr const TCHAR* DataAssetManager = TEXT("DataAssetManager");
-	}
+	} // namespace ModuleName
 
 	namespace Private
 	{
 		/**
-		 * Class used to filter asset classes based on certain conditions like class flags and blueprint base class restrictions.
+		 * @brief Class used to filter asset classes based on certain conditions like class flags and blueprint base class restrictions.
 		 * Implements the IClassViewerFilter interface to provide custom filtering logic for class viewer in the Unreal Editor.
 		 */
 		class FAssetClassParentFilter : public IClassViewerFilter
 		{
 		public:
-
 			FAssetClassParentFilter()
-				: DisallowedClassFlags(CLASS_None), bDisallowBlueprintBase(false) {
+				: DisallowedClassFlags(CLASS_None), bDisallowBlueprintBase(false)
+			{
 			}
 
 			/**
-			 * Set of allowed parent classes.
+			 * @brief Set of allowed parent classes.
 			 * All children of these classes will be included unless filtered out by another setting.
 			 * This filter excludes classes that are not in this set unless specified otherwise.
 			 */
-			TSet< const UClass* > AllowedChildrenOfClasses;
+			TSet<const UClass*> AllowedChildrenOfClasses;
 
 			/**
-			 * Disallowed class flags.
+			 * @brief Disallowed class flags.
 			 * Used to filter out classes that have the specified flags.
 			 */
 			EClassFlags DisallowedClassFlags;
@@ -70,7 +69,7 @@ namespace DataAssetManager
 			bool bDisallowBlueprintBase;
 
 			/**
-			 * Determines whether the given class is allowed based on the filter settings.
+			 * @brief Determines whether the given class is allowed based on the filter settings.
 			 *
 			 * @param InInitOptions Initialization options for the class viewer.
 			 * @param InClass The class to be checked.
@@ -78,7 +77,7 @@ namespace DataAssetManager
 			 *
 			 * @return true if the class is allowed, false otherwise.
 			 */
-			virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass, TSharedRef< FClassViewerFilterFuncs > InFilterFuncs) override
+			virtual bool IsClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const UClass* InClass, TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
 			{
 				bool bAllowed = !InClass->HasAnyClassFlags(DisallowedClassFlags)
 					&& InClass->CanCreateAssetOfClass()
@@ -96,7 +95,7 @@ namespace DataAssetManager
 			}
 
 			/**
-			 * Determines whether an unloaded class is allowed based on the filter settings.
+			 * @brief Determines whether an unloaded class is allowed based on the filter settings.
 			 *
 			 * @param InInitOptions Initialization options for the class viewer.
 			 * @param InUnloadedClassData Data about the unloaded class to be checked.
@@ -104,7 +103,7 @@ namespace DataAssetManager
 			 *
 			 * @return true if the unloaded class is allowed, false otherwise.
 			 */
-			virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const TSharedRef< const IUnloadedBlueprintData > InUnloadedClassData, TSharedRef< FClassViewerFilterFuncs > InFilterFuncs) override
+			virtual bool IsUnloadedClassAllowed(const FClassViewerInitializationOptions& InInitOptions, const TSharedRef<const IUnloadedBlueprintData> InUnloadedClassData, TSharedRef<FClassViewerFilterFuncs> InFilterFuncs) override
 			{
 				if (bDisallowBlueprintBase)
 				{
@@ -116,18 +115,18 @@ namespace DataAssetManager
 			}
 		};
 
-	}
-}
+	} // namespace Private
+} // namespace DataAssetManager
 
 namespace DataAssetListColumns
 {
-	/** IDs for list columns */
+	/** @brief  IDs for list columns */
 	static const FName ColumnID_RC("RevisionControl");
 	static const FName ColumnID_Name("Name");
 	static const FName ColumnID_Type("Type");
 	static const FName ColumnID_DiskSize("DiskSize");
 	static const FName ColumnID_Path("Path");
-}
+} // namespace DataAssetListColumns
 
 namespace DataAssetManagerMenu
 {
@@ -135,7 +134,7 @@ namespace DataAssetManagerMenu
 	{
 		static const FName AppStyle = FAppStyle::GetAppStyleSetName();
 		static const FName RevisionControlStyle = FRevisionControlStyleManager::GetStyleSetName();
-	}
+	} // namespace IconStyle
 
 	namespace Icons
 	{
@@ -164,7 +163,7 @@ namespace DataAssetManagerMenu
 
 		// Help Menu
 		const FSlateIcon Documentation = FSlateIcon(IconStyle::AppStyle, "GraphEditor.GoToDocumentation");
-	}
+	} // namespace Icons
 
 	namespace ExtensionHookNames
 	{
@@ -175,8 +174,7 @@ namespace DataAssetManagerMenu
 		const FName ExtensionHookSettingsName = TEXT("Settings");
 		const FName ExtensionHookPluginSettingsName = TEXT("PluginSettings");
 		const FName ExtensionHookRestartName = TEXT("Restart");
-	}
-
+	} // namespace ExtensionHookNames
 
 	namespace Texts
 	{
@@ -242,8 +240,9 @@ namespace DataAssetManagerMenu
 		const FText SettingsMenuTooltip = LOCTEXT("SettingsMenuTooltip", "Plugin settings");
 		const FText HelpMenuText = LOCTEXT("HelpMenu", "Help");
 		const FText HelpMenuTooltip = LOCTEXT("HelpMenuTooltip", "Help and documentation");
-	}
-}
+	} // namespace Texts
+} // namespace DataAssetManagerMenu
+
 
 /**
  * @struct FAssetTreeFolderNode
@@ -251,37 +250,41 @@ namespace DataAssetManagerMenu
  *
  * This structure stores information about a folder within an asset hierarchy,
  * including its path, name, child nodes, and various state flags.
+ * 
+ * @see FFolderTreeData
+ * @see FFolderTreeState
+ * @ingroup DataAssetManager
  */
 struct FAssetTreeFolderNode final
 {
-	/** Full path to the folder in the asset tree. */
+	/** @brief Full path to the folder in the asset tree. */
 	FString FolderPath;
 
-	/** The display name of the folder (without path). */
+	/** @brief The display name of the folder (without path). */
 	FString FolderName;
 
-	/** Pointer to the parent folder node. Null if this node is the root. */
+	/** @brief Pointer to the parent folder node. Null if this node is the root. */
 	TSharedPtr<FAssetTreeFolderNode> Parent;
 
 	/** List of child folder nodes contained within this folder. */
 	TArray<TSharedPtr<FAssetTreeFolderNode>> SubItems;
 
-	/** Indicates if the folder belongs to a development directory. */
+	/** @brief Indicates if the folder belongs to a development directory. */
 	bool bIsDev : 1;
 
-	/** True if this node is the root of the folder hierarchy. */
+	/** @brief True if this node is the root of the folder hierarchy. */
 	bool bIsRoot : 1;
 
-	/** True if the folder contains no assets or subfolders. */
+	/** @brief True if the folder contains no assets or subfolders. */
 	bool bIsEmpty : 1;
 
-	/** True if the folder is excluded from asset operations or visibility. */
+	/** @brief True if the folder is excluded from asset operations or visibility. */
 	bool bIsExcluded : 1;
 
-	/** True if the folder is currently expanded in the UI tree view. */
+	/** @brief True if the folder is currently expanded in the UI tree view. */
 	bool bIsExpanded : 1;
 
-	/** True if the folder is visible in the asset tree. */
+	/** @brief True if the folder is visible in the asset tree. */
 	bool bIsVisible : 1;
 
 	/**
@@ -295,8 +298,8 @@ struct FAssetTreeFolderNode final
 	 * @param InParent       Pointer to the parent folder node (default: nullptr).
 	 */
 	explicit FAssetTreeFolderNode(
-		const FString& InFolderPath = TEXT(""),
-		const FString& InFolderName = TEXT(""),
+		const FString&					 InFolderPath = TEXT(""),
+		const FString&					 InFolderName = TEXT(""),
 		TSharedPtr<FAssetTreeFolderNode> InParent = nullptr)
 		: FolderPath(InFolderPath)
 		, FolderName(InFolderName)
@@ -333,8 +336,12 @@ struct FAssetTreeFolderNode final
 
 /**
  * @brief Holds raw folder data and state-independent information for the folder tree.
+ * 
+ * @see FFolderTreeState for runtime state and UI-related widgets
+ * 
+ * @ingroup DataAssetManager
  */
-struct FFolderTreeData final 
+struct FFolderTreeData final
 {
 	/**
 	 * @brief Root-level folder nodes displayed in the tree view.
@@ -370,9 +377,10 @@ struct FFolderTreeData final
 	FString PluginPath;
 };
 
-
 /**
  * @brief Represents the current runtime state and UI-related widgets of the folder tree.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FFolderTreeState final
 {
@@ -412,31 +420,31 @@ struct FFolderTreeState final
 	EColumnSortMode::Type ColumnPathSortMode = EColumnSortMode::None;
 };
 
-
 /**
- * Structure that stores visibility flags for asset table columns.
+ * @brief Structure that stores visibility flags for asset table columns.
  *
  * Provides control over which columns are currently displayed
  * in the asset management or data table view.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FColumnVisibilityFlags
 {
-	/** Whether the asset type column is currently visible. */
+	/** @brief Whether the asset type column is currently visible. */
 	bool bShowTypeColumn = true;
 
-	/** Whether the disk size column is currently visible. */
+	/** @brief Whether the disk size column is currently visible. */
 	bool bShowDiskSizeColumn = true;
 
-	/** Whether the asset path column is currently visible. */
+	/** @brief Whether the asset path column is currently visible. */
 	bool bShowPathColumn = true;
 
-	/** Whether the revision control column is currently visible. */
+	/** @brief Whether the revision control column is currently visible. */
 	bool bShowRevisionColumn = true;
 };
 
-
 /**
- * Structure that stores delegate handles used for asset registry event subscriptions.
+ * @brief Structure that stores delegate handles used for asset registry event subscriptions.
  *
  * This structure provides a centralized way to manage all delegate registration
  * handles used by the manager to subscribe to AssetRegistry events such as:
@@ -447,11 +455,13 @@ struct FColumnVisibilityFlags
  *
  * Keeping these handles together ensures proper cleanup and safe unregistration
  * from AssetRegistry callbacks during shutdown or destruction.
+ *
+ * @ingroup DataAssetManager
  */
 struct FManagerDelegateHandles final
 {
 	/**
-	 * Registration handle for asset creation events.
+	 * @brief Registration handle for asset creation events.
 	 *
 	 * Used to safely unregister from AssetRegistry
 	 * callbacks during shutdown.
@@ -459,14 +469,14 @@ struct FManagerDelegateHandles final
 	FDelegateHandle AssetAddedDelegateHandle{};
 
 	/**
-	 * Registration handle for asset deletion events.
+	 * @brief Registration handle for asset deletion events.
 	 *
 	 * Tracks removal notifications from AssetRegistry.
 	 */
 	FDelegateHandle AssetRemovedDelegateHandle{};
 
 	/**
-	 * Registration handle for asset rename events.
+	 * @brief Registration handle for asset rename events.
 	 *
 	 * Maintains consistency when assets are
 	 * renamed in content browser.
@@ -474,38 +484,40 @@ struct FManagerDelegateHandles final
 	FDelegateHandle AssetRenamedDelegateHandle{};
 
 	/**
-	 * Delegate handle for the OnFilesLoaded event subscription.
+	 * @brief Delegate handle for the OnFilesLoaded event subscription.
 	 * Used to safely unsubscribe when the widget is destroyed.
 	 * @see SubscribeToAssetRegistryEvent(), UnsubscribeFromAssetRegistryEvents()
 	 */
 	FDelegateHandle FilesLoadedHandle{};
 };
 
-
-
 /**
- * Structure that stores all UI widgets used in the asset manager panel.	
+ * @brief Structure that stores all UI widgets used in the asset manager panel.
  *
  * Centralizes all Slate widget references for easier lifetime management and initialization.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FAssetManagerWidgets final
 {
-	TSharedPtr<class SWidget> MenuBar = nullptr;
-	TSharedPtr<class SSplitter> Splitter = nullptr;
-	TSharedPtr<class IDetailsView> DetailsView = nullptr;
-	TSharedPtr<class SComboButton> ComboButton = nullptr;
-	TSharedPtr<class SEditableText> EditableTextWidget = nullptr;
-	TSharedPtr<class SFilterSearchBox> ListViewSearchBox = nullptr;
+	TSharedPtr<class SWidget>							MenuBar = nullptr;
+	TSharedPtr<class SSplitter>							Splitter = nullptr;
+	TSharedPtr<class IDetailsView>						DetailsView = nullptr;
+	TSharedPtr<class SComboButton>						ComboButton = nullptr;
+	TSharedPtr<class SEditableText>						EditableTextWidget = nullptr;
+	TSharedPtr<class SFilterSearchBox>					ListViewSearchBox = nullptr;
 	TSharedPtr<class SListView<TSharedPtr<FAssetData>>> AssetListView = nullptr;
 };
 
 /**
  * Structure that stores all asset data collections used by the asset manager.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FAssetManagerData final
 {
 	/**
-	 * Complete collection of discovered assets in the project.
+	 * @brief Complete collection of discovered assets in the project.
 	 *
 	 * Populated during initial scan and updated via asset registry delegates.
 	 * Contains raw FAssetData before any filtering is applied.
@@ -513,7 +525,7 @@ struct FAssetManagerData final
 	TArray<TSharedPtr<FAssetData>> DataAssets;
 
 	/**
-	 * Subset of DataAssets that pass current filter criteria.
+	 * @brief Subset of DataAssets that pass current filter criteria.
 	 *
 	 * Dynamically updated based on:
 	 * - Search text matches
@@ -523,7 +535,7 @@ struct FAssetManagerData final
 	TArray<TSharedPtr<FAssetData>> FilteredDataAssets;
 
 	/**
-	 * Assets queued for deferred deletion.
+	 * @brief Assets queued for deferred deletion.
 	 *
 	 * Maintains references until deletion is confirmed
 	 * or canceled via transaction.
@@ -531,7 +543,7 @@ struct FAssetManagerData final
 	TArray<TSharedPtr<FAssetData>> DeletionDataAssets;
 
 	/**
-	 * Currently highlighted asset in UI.
+	 * @brief Currently highlighted asset in UI.
 	 *
 	 * Synchronized between:
 	 * - List view selection
@@ -541,24 +553,26 @@ struct FAssetManagerData final
 	TSharedPtr<FAssetData> SelectedAsset = nullptr;
 
 	/**
-	 * Holds the currently active filters in the data asset manager.
+	 * @brief Holds the currently active filters in the data asset manager.
 	 * Each filter is represented as a string.
 	 */
 	TSet<FString> ActiveFilters;
 
 	/**
-	 * Plugin directories filters
+	 * @brief Plugin directories filters
 	 */
 	TSet<FString> ActivePluginFilters;
 };
 
 /**
- * Structure that stores all data related to editable widgets and text inputs.
+ * @brief  Structure that stores all data related to editable widgets and text inputs.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FEditableWidgets final
 {
 	/**
-	 * Mapping of editable text widgets used for asset property editing.
+	 * @brief Mapping of editable text widgets used for asset property editing.
 	 *
 	 * Key:   TPair<PackagePath, AssetName> - Unique identifier combining asset location and name
 	 * Value: TSharedPtr<SEditableText>     - Shared reference to the editable text widget
@@ -590,11 +604,9 @@ struct FEditableWidgets final
 		}
 
 		EditableTextWidgets.Add(
-			{ 
-				AssetData->PackagePath, 
+			{ AssetData->PackagePath,
 				AssetData->AssetName },
-			EditableText
-		);
+			EditableText);
 	}
 };
 
@@ -602,19 +614,21 @@ struct FEditableWidgets final
  * @brief Stores configuration and helper functions for managing asset table columns.
  *
  * Handles column visibility, order, and dynamic addition to a header row in the UI.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FColumnData final
 {
 
-	/** Column visibility settings for the asset table. */
+	/** @brief Column visibility settings for the asset table. */
 	FColumnVisibilityFlags ColumnVisibility;
 
 	// Fixed-size allocator constants
-	/** Maximum number of column adder functions. */
+	/** @brief Maximum number of column adder functions. */
 	static constexpr uint32 NumColumnAdders = 8;
 
 	/**
-	 * Mapping of column IDs to column adder functions.
+	 * @brief Mapping of column IDs to column adder functions.
 	 *
 	 * Key:   Column ID (FName)
 	 * Value: Function that adds the column to a header row
@@ -627,7 +641,7 @@ struct FColumnData final
 	static constexpr uint32 NumColumnOrder = 6;
 
 	/**
-	 * Ordered list of column IDs defining display order.
+	 * @brief  Ordered list of column IDs defining display order.
 	 *
 	 * Used to maintain consistent column placement in the UI.
 	 * Uses fixed-size memory for predictable layout.
@@ -655,56 +669,55 @@ struct FColumnData final
 	 * @param AddColumnToHeader Function used to add a column to a header row
 	 * @param CreateRevisionControlColumn Function used to create the revision control column
 	 */
-	template<typename AddColumnFunc, typename CreateRevisionFunc>
+	template <typename AddColumnFunc, typename CreateRevisionFunc>
 	void InitializeColumnAdders(AddColumnFunc&& AddColumnToHeader, CreateRevisionFunc&& CreateRevisionControlColumn)
 	{
-		ColumnAdders.Add(DataAssetListColumns::ColumnID_RC, [this, CreateRevisionControlColumn](TSharedPtr<SHeaderRow> HeaderRow)
+		ColumnAdders.Add(DataAssetListColumns::ColumnID_RC, [this, CreateRevisionControlColumn](TSharedPtr<SHeaderRow> HeaderRow) {
+			if (ColumnVisibility.bShowRevisionColumn)
 			{
-				if (ColumnVisibility.bShowRevisionColumn)
-				{
-					HeaderRow->AddColumn(CreateRevisionControlColumn());
-				}
-			});
+				HeaderRow->AddColumn(CreateRevisionControlColumn());
+			}
+		});
 
-		ColumnAdders.Add(DataAssetListColumns::ColumnID_Name, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow)
-			{
-				AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_Name, TEXT("Name"), 0.4f);
-			});
+		ColumnAdders.Add(DataAssetListColumns::ColumnID_Name, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow) {
+			AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_Name, TEXT("Name"), 0.4f);
+		});
 
-		ColumnAdders.Add(DataAssetListColumns::ColumnID_Type, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow)
+		ColumnAdders.Add(DataAssetListColumns::ColumnID_Type, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow) {
+			if (ColumnVisibility.bShowTypeColumn)
 			{
-				if (ColumnVisibility.bShowTypeColumn)
-				{
-					AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_Type, TEXT("Type"), 0.3f);
-				}
-			});
+				AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_Type, TEXT("Type"), 0.3f);
+			}
+		});
 
-		ColumnAdders.Add(DataAssetListColumns::ColumnID_DiskSize, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow)
+		ColumnAdders.Add(DataAssetListColumns::ColumnID_DiskSize, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow) {
+			if (ColumnVisibility.bShowDiskSizeColumn)
 			{
-				if (ColumnVisibility.bShowDiskSizeColumn)
-				{
-					AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_DiskSize, TEXT("DiskSize"), 0.15f);
-				}
-			});
+				AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_DiskSize, TEXT("DiskSize"), 0.15f);
+			}
+		});
 
-		ColumnAdders.Add(DataAssetListColumns::ColumnID_Path, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow)
+		ColumnAdders.Add(DataAssetListColumns::ColumnID_Path, [this, AddColumnToHeader](TSharedPtr<SHeaderRow> HeaderRow) {
+			if (ColumnVisibility.bShowPathColumn)
 			{
-				if (ColumnVisibility.bShowPathColumn)
-				{
-					AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_Path, TEXT("Path"), 0.3f);
-				}
-			});
+				AddColumnToHeader(HeaderRow, DataAssetListColumns::ColumnID_Path, TEXT("Path"), 0.3f);
+			}
+		});
 	}
-
 
 	/**
 	 * @brief Updates the visible columns in the provided header row based on ColumnOrder and visibility flags.
 	 * @param HeaderRow The header row to update
+	 * 
+	 * @ingroup DataAssetManager
 	 */
 	FORCEINLINE void UpdateColumnVisibility(TSharedPtr<SHeaderRow> HeaderRow)
 	{
-		if (!HeaderRow.IsValid()) return;
-			
+		if (!HeaderRow.IsValid())
+		{
+			return;
+		}
+
 		HeaderRow->ClearColumns();
 
 		for (const FName& ColumnId : ColumnOrder)
@@ -719,10 +732,12 @@ struct FColumnData final
 	/**
 	 * @brief Builds a new SHeaderRow and adds columns according to ColumnOrder and visibility flags.
 	 * @return The constructed header row
+	 * 
+	 * @ingroup DataAssetManager
 	 */
 	FORCEINLINE TSharedRef<SHeaderRow> BuildHeaderRow() const
 	{
-		TSharedRef<SHeaderRow> HeaderRow = SNew(SHeaderRow).Cursor(EMouseCursor::Hand);
+		TSharedRef<SHeaderRow>		 HeaderRow = SNew(SHeaderRow).Cursor(EMouseCursor::Hand);
 		const TSharedPtr<SHeaderRow> HeaderRowPtr = HeaderRow;
 
 		for (const FName& ColumnId : ColumnOrder)
@@ -739,13 +754,15 @@ struct FColumnData final
 	/**
 	 * @brief Toggles visibility for all columns.
 	 * If any column is visible, all will be hidden. Otherwise, all will be shown.
+	 * 
+	 * @ingroup DataAssetManager
 	 */
 	FORCEINLINE void ToggleAllColumnsVisibility()
 	{
-		const bool bShouldHide =
-			ColumnVisibility.bShowDiskSizeColumn ||
-			ColumnVisibility.bShowPathColumn ||
-			ColumnVisibility.bShowTypeColumn ||
+		const bool bShouldHide =					//
+			ColumnVisibility.bShowDiskSizeColumn || //
+			ColumnVisibility.bShowPathColumn ||		//
+			ColumnVisibility.bShowTypeColumn ||		//
 			ColumnVisibility.bShowRevisionColumn;
 
 		const bool bNewVisibility = !bShouldHide;
@@ -762,10 +779,10 @@ struct FColumnData final
 	 */
 	FORCEINLINE bool AreAllColumnsHidden() const
 	{
-		return !ColumnVisibility.bShowDiskSizeColumn &&
-			!ColumnVisibility.bShowPathColumn &&
-			!ColumnVisibility.bShowTypeColumn &&
-			!ColumnVisibility.bShowRevisionColumn;
+		return !ColumnVisibility.bShowDiskSizeColumn //
+			&& !ColumnVisibility.bShowPathColumn	 //
+			&& !ColumnVisibility.bShowTypeColumn	 //
+			&& !ColumnVisibility.bShowRevisionColumn;
 	}
 };
 
@@ -776,6 +793,8 @@ DEFINE_LOG_CATEGORY_STATIC(SDataAssetManagerScopeLog, Log, All);
  *
  * This struct starts timing upon construction and logs the elapsed time when it is destroyed.
  * Useful for profiling sections of code in Unreal Engine projects.
+ * 
+ * @ingroup DataAssetManager
  */
 struct FScopeTimer
 {
