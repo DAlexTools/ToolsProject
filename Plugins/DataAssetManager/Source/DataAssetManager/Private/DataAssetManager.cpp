@@ -10,7 +10,8 @@
 #include "UI/SDataAssetManagerWidget.h"
 #include "UI/SDeveloperSettingsWidget.h"
 #include "DataAssetManagerTypes.h"
-
+#include "WorkspaceMenuStructure.h"
+#include "WorkspaceMenuStructureModule.h"
 
 #define LOCTEXT_NAMESPACE "FDataAssetManagerModule"
 
@@ -18,18 +19,16 @@ void FDataAssetManagerModule::StartupModule()
 {
 	FPropertyEditorModule& PropertyEditorModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>(DataAssetManager::ModuleName::PropertyEditor);
 	PropertyEditorModule.RegisterCustomClassLayout(UDataAssetManagerSettings::StaticClass()->GetFName(),
-	FOnGetDetailCustomizationInstance::CreateStatic(&SDeveloperSettingsWidget::MakeInstance));
+		FOnGetDetailCustomizationInstance::CreateStatic(&SDeveloperSettingsWidget::MakeInstance));
 
-	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(
-	DataAssetManager::DataAssetManagerTabName,
-	FOnSpawnTab::CreateRaw(this, &FDataAssetManagerModule::CreateDataAssetManagerTab))
-	.SetDisplayName(LOCTEXT("FDataAssetManagerModule", "Data Asset Manager"))
-	.SetMenuType(ETabSpawnerMenuType::Enabled);
+	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(DataAssetManager::DataAssetManagerTabName, FOnSpawnTab::CreateRaw(this, &FDataAssetManagerModule::CreateDataAssetManagerTab)) //
+		.SetGroup(WorkspaceMenu::GetMenuStructure().GetToolsCategory())																												//
+		.SetDisplayName(LOCTEXT("FDataAssetManagerModule", "Data Asset Manager"))																									//
+		.SetIcon(FSlateIcon(FName("EditorStyle"), "ClassIcon.DataAsset"))																											//
+		.SetMenuType(ETabSpawnerMenuType::Enabled);																																	//
 
 	UToolMenus::RegisterStartupCallback(
-		FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FDataAssetManagerModule::ModifyMenus)
-	);
-
+		FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FDataAssetManagerModule::ModifyMenus));
 }
 
 void FDataAssetManagerModule::ShutdownModule()
@@ -39,7 +38,6 @@ void FDataAssetManagerModule::ShutdownModule()
 		FPropertyEditorModule& PropertyEditorModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>(DataAssetManager::ModuleName::PropertyEditor);
 		PropertyEditorModule.UnregisterCustomClassLayout(UDataAssetManagerSettings::StaticClass()->GetFName());
 	}
-
 }
 
 ETabSpawnerMenuType::Type FDataAssetManagerModule::GetVisibleModule() const
@@ -50,7 +48,7 @@ ETabSpawnerMenuType::Type FDataAssetManagerModule::GetVisibleModule() const
 	}
 	return ETabSpawnerMenuType::Hidden;
 }
-
+/* clang-format off */
 TSharedRef<SDockTab> FDataAssetManagerModule::CreateDataAssetManagerTab(const FSpawnTabArgs& Args)
 {
 	TSharedRef<SDockTab> DataAssetManagerTab = SNew(SDockTab).TabRole(ETabRole::NomadTab);
@@ -79,7 +77,7 @@ TSharedRef<SDockTab> FDataAssetManagerModule::CreateDataAssetManagerTab(const FS
 
 	return DataAssetManagerTab;
 }
-
+/* clang-format on */
 void FDataAssetManagerModule::ModifyMenus()
 {
 	if (UToolMenu* Menu = UToolMenus::Get()->FindMenu("LevelEditor.MainMenu.File"))
@@ -92,9 +90,8 @@ void FDataAssetManagerModule::ModifyMenus()
 					FExecuteAction(),
 					FCanExecuteAction(),
 					FIsActionChecked(),
-					FIsActionButtonVisible::CreateLambda([]() { return false; })
-				);
-			
+					FIsActionButtonVisible::CreateLambda([]() { return false; }));
+
 				Entry->SetCommandList(nullptr);
 			}
 		}
@@ -110,18 +107,15 @@ void FDataAssetManagerModule::RestartWidget()
 
 		// Set timer to reopen the tab after a short delay.
 		FTimerHandle TimerHandle;
-		GEditor->GetTimerManager().Get().SetTimer(TimerHandle, [this]()
-			{
-				OpenManagerTab();
-			},	DataAssetManager::TabReopenDelaySeconds, false);
+		GEditor->GetTimerManager().Get().SetTimer(TimerHandle, [this]() { OpenManagerTab(); }, DataAssetManager::TabReopenDelaySeconds, false);
 	}
 }
 
 void FDataAssetManagerModule::OpenManagerTab()
 {
-    FGlobalTabmanager::Get()->TryInvokeTab(DataAssetManager::DataAssetManagerTabName);
+	FGlobalTabmanager::Get()->TryInvokeTab(DataAssetManager::DataAssetManagerTabName);
 }
 
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FDataAssetManagerModule, DataAssetManager)
