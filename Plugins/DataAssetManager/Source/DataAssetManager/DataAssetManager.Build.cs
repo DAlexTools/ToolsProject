@@ -63,7 +63,8 @@ public class DataAssetManager : ModuleRules
                 "MessageLog",
                 "OutputLog",
                 "Json",
-                "JsonUtilities"
+                "JsonUtilities",
+                "WorkspaceMenuStructure",
             }   
             );
 
