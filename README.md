@@ -4,7 +4,7 @@
 A collection of powerful editor tools for Unreal Engine, built **entirely with Slate**.  
 This project brings together several tools to improve content management, validation, and workflow efficiency inside the Unreal Editor.
 
-GitHub: [https://github.com/VaeDeveloper/ToolsProject](https://github.com/VaeDeveloper/ToolsProject)
+
 
 
 
@@ -12,9 +12,9 @@ GitHub: [https://github.com/VaeDeveloper/ToolsProject](https://github.com/VaeDev
 
 | Tool                  | Description                                                                               |
 |-----------------------|-------------------------------------------------------------------------------------------|
-| **DataAssetManager**     | Manages DataAssets with batch operations, editing, and organization tools.               |
-
-
+| C++ Template Generator | Create C++ classes from predefined templates with a streamlined editor workflow.        |
+| DataAssetManager      | Manages DataAssets with batch operations, editing, and organization tools.               |
+| ValidatorX            | Runs automated validation rules to detect issues like missing references, unused variables, or wrong settings. |                                      |
 
 ## 🏛️ ToolsProjectEditor Module
 
@@ -28,7 +28,7 @@ Each plugin uses **Slate** to create custom UIs, allowing seamless integration i
 
 ## 📚 Requirements
 
-- Unreal Engine 5.4 or high
+- Unreal Engine 5.5 or high
 
 ## ⚠️ Project Status
 
