@@ -1,15 +1,17 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "CppTemplateGenerator.h"
-#include "GameFramework/Actor.h"      
-#include "Components/ActorComponent.h" 
-#include "GameFramework/Pawn.h"       
-#include "GameFramework/Character.h"   
+#include "GameFramework/Actor.h"
+#include "Components/ActorComponent.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/GameModeBase.h"
-#include "GameFramework/HUD.h"     
+#include "GameFramework/HUD.h"
 #include "CppTemplateGeneratorSettings.h"
 
 #define LOCTEXT_NAMESPACE "FCppTemplateGeneratorModule"
+
+DEFINE_LOG_CATEGORY_STATIC(CppTemplateGeneratorLog, All, All);
 
 static const FName CppTemplateGeneratorTabName(TEXT("CppTemplateGenerator"));
 
@@ -25,7 +27,7 @@ void FCppTemplateGeneratorModule::ShutdownModule()
 {
 	if (UToolMenus::IsToolMenuUIEnabled())
 	{
-		UToolMenus* ToolMenus = UToolMenus::Get();
+		const UToolMenus* const ToolMenus = UToolMenus::Get();
 		if (ToolMenus)
 		{
 			ToolMenus->UnregisterOwner(this);
@@ -35,11 +37,10 @@ void FCppTemplateGeneratorModule::ShutdownModule()
 
 void FCppTemplateGeneratorModule::RegisterMenus()
 {
-	UToolMenu*		  Menu = UToolMenus::Get()->RegisterMenu("MainFrame.MainMenu.Tools");
+	UToolMenu* const  Menu = UToolMenus::Get()->RegisterMenu("MainFrame.MainMenu.Tools");
 	FToolMenuSection& Section = Menu->AddSection("Programming", LOCTEXT("ProgrammingHeading", "Programming"));
 
-
-	const UCppTemplateGeneratorSettings* Settings = GetDefault<UCppTemplateGeneratorSettings>();
+	const UCppTemplateGeneratorSettings* const Settings = GetDefault<UCppTemplateGeneratorSettings>();
 	if (!Settings)
 	{
 		return;
@@ -59,10 +60,10 @@ void FCppTemplateGeneratorModule::RegisterMenus()
 					continue;
 				}
 
-				FText Label = FText::FromString(TemplateClass->GetName());
+				const FText Label = FText::FromString(TemplateClass->GetName());
 
 				SubSection.AddMenuEntry(
-					*TemplateClass->GetName(),									  
+					*TemplateClass->GetName(),
 					TAttribute<FText>::CreateLambda([Label]() { return Label; }),
 					TAttribute<FText>::CreateLambda([]() { return LOCTEXT("CreateTemplateTooltip", "Creates a new C++ class from this template"); }),
 					FSlateIcon(FAppStyle::GetAppStyleSetName(), "MainFrame.AddCodeToProject"),
@@ -80,6 +81,7 @@ void FCppTemplateGeneratorModule::OpenCreateTemplateForClass(UClass* ParentClass
 {
 	if (!ParentClass)
 	{
+		UE_LOG(CppTemplateGeneratorLog, Warning, TEXT("OpenCreateTemplateForClass called with null ParentClass"));
 		return;
 	}
 
@@ -90,5 +92,5 @@ void FCppTemplateGeneratorModule::OpenCreateTemplateForClass(UClass* ParentClass
 	FGameProjectGenerationModule::Get().OpenAddCodeToProjectDialog(Config);
 }
 #undef LOCTEXT_NAMESPACE
-	
+
 IMPLEMENT_MODULE(FCppTemplateGeneratorModule, CppTemplateGenerator)

@@ -13,7 +13,12 @@
 #include "CppTemplateGeneratorSettings.generated.h"
 
 /**
- * Developer settings для плагина CppTemplateGenerator
+ * @brief Settings class for the C++ Template Generator plugin.
+ *
+ * This class provides configurable settings for the C++ Template Generator plugin,
+ * allowing users to customize which C++ class templates are available for generation.
+ * The settings are stored in the Unreal Editor configuration system and are accessible
+ * through the Editor Preferences under the "C++ Template Generator" section.
  */
 UCLASS(config = Editor, defaultconfig, meta = (DisplayName = "C++ Template Generator"))
 class CPPTEMPLATEGENERATOR_API UCppTemplateGeneratorSettings : public UDeveloperSettings
@@ -21,10 +26,23 @@ class CPPTEMPLATEGENERATOR_API UCppTemplateGeneratorSettings : public UDeveloper
 	GENERATED_BODY()
 
 public:
-	
+	/**
+	 * @brief Array of C++ class templates available for code generation.
+	 *
+	 * @note The array is pre-populated with commonly used Unreal Engine base classes
+	 *       but can be customized through the Editor Preferences to add or remove
+	 *       templates as needed.
+	 *
+	 * @details
+	 * - Configurable via Editor Preferences UI
+	 * - Defaults include essential base classes like AActor, UActorComponent, etc.
+	 * - Restricted to specific class types via meta specifiers for better UX
+	 *
+	 * @see UCppTemplateGenerator for the main plugin logic that uses these templates.
+	 * @see UDeveloperSettings for the base settings class functionality.
+	 */
 	UPROPERTY(EditAnywhere, config, Category = "Templates", meta = (AllowedClasses = "Actor,ActorComponent,Pawn,Character,GameModeBase,HUD", DisplayName = "Template Classes"))
-	TArray<TSubclassOf<UObject>> TemplateClasses = 
-	{
+	TArray<TSubclassOf<UObject>> TemplateClasses = {
 		AActor::StaticClass(),
 		UActorComponent::StaticClass(),
 		APawn::StaticClass(),
