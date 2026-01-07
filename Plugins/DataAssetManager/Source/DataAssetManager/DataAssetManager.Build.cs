@@ -25,7 +25,6 @@ public class DataAssetManager : ModuleRules
             {
                 "Core",
                 "CoreUObject",
-
             }
             );
 
@@ -65,6 +64,7 @@ public class DataAssetManager : ModuleRules
                 "Json",
                 "JsonUtilities",
                 "WorkspaceMenuStructure",
+                "GameProjectGeneration"
             }   
             );
 

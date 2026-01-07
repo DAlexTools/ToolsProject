@@ -26,7 +26,6 @@ void FDataAssetManagerModule::StartupModule()
 		.SetDisplayName(LOCTEXT("FDataAssetManagerModule", "Data Asset Manager"))																									//
 		.SetIcon(FSlateIcon(FName("EditorStyle"), "ClassIcon.DataAsset"))																											//
 		.SetMenuType(ETabSpawnerMenuType::Enabled);																																	//
-
 }
 
 void FDataAssetManagerModule::ShutdownModule()
