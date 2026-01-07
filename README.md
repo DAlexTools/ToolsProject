@@ -14,7 +14,7 @@ This project brings together several tools to improve content management, valida
 |-----------------------|-------------------------------------------------------------------------------------------|
 |   **DataAssetManager**     | Manages DataAssets with batch operations, editing, and organization tools.               |
 | **C++ Template Generator** | Create C++ classes from predefined templates with a streamlined editor workflow.        |
-
+| **ValidatorX**          | Runs automated validation rules to detect issues like missing references, unused variables, or wrong settings. |
 
 ## 🏛️ ToolsProjectEditor Module
 
