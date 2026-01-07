@@ -51,7 +51,7 @@ TSharedRef<ITableRow> SValidatorWidget::OnGenerateRowForList(TWeakObjectPtr<UBlu
 		.Validator(InItem)
 		.Font(FontInfo);
 }
-/* clang-format on */
+
 void SValidatorWidget::OnCheckValidatorStateChange(ECheckBoxState NewState)
 {
 	const bool bEnableAll = (NewState == ECheckBoxState::Checked);
@@ -68,7 +68,7 @@ void SValidatorWidget::OnCheckValidatorStateChange(ECheckBoxState NewState)
 		ListViewWidget->RequestListRefresh();
 	}
 }
-/* clang-format off */
+
 TSharedRef<SHeaderRow> SValidatorWidget::GetValidatorHeaderRow()
 {
 	TSharedRef<SHeaderRow> HeaderRow = SNew(SHeaderRow)

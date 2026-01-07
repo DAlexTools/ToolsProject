@@ -18,7 +18,6 @@ void FValidatorXModule::StartupModule()
 {
 	FCoreDelegates::OnPostEngineInit.AddRaw(this, &FValidatorXModule::HandlePostEngineInit);
 
-	// add the File->DataValidation menu subsection
 	UToolMenus::Get()->RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FValidatorXModule::RegisterMenus));
 
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(ValidatorXTabName, FOnSpawnTab::CreateRaw(this, &FValidatorXModule::OnSpawnValidatorXTab)) //
@@ -62,7 +61,7 @@ void FValidatorXModule::HandlePostEngineInit()
 {
 	if (GEditor)
 	{
-		UEditorValidatorSubsystem* ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
+		const UEditorValidatorSubsystem* const ValidatorSubsystem = GEditor->GetEditorSubsystem<UEditorValidatorSubsystem>();
 		if (ValidatorSubsystem)
 		{
 			ValidatorSubsystem->ForEachEnabledValidator(

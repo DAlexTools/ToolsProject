@@ -120,7 +120,6 @@ private:
 	ECheckBoxState GetBoxButtonState() const;
 
 private:
-
 	/** The font used for text widgets in this row. */
 	FSlateFontInfo LocalFont;
 
@@ -141,8 +140,6 @@ private:
 			.Padding(4.0f)
 			.VAlign(VAlign_Center)
 			.HAlign(HAlign_Center)
-			[
-				Widget
-			];
+				[Widget];
 	}
 };

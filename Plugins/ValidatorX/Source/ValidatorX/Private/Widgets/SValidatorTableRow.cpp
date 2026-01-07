@@ -53,7 +53,6 @@ FReply SValidatorTableRow::OnKeyDown(const FGeometry& MyGeometry, const FKeyEven
 	return FReply::Unhandled();
 }
 
-/* clang-format on */
 TSharedRef<SBox> SValidatorTableRow::GetTypeBox()
 {
 	FString Type;
