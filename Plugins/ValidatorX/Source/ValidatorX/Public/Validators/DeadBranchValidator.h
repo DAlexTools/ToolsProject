@@ -58,6 +58,6 @@ public:
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 
 private:
-	void JumpToNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node);
+
 	void RemoveNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node);
 };

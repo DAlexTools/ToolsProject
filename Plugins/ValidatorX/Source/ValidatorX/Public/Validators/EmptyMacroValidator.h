@@ -56,5 +56,4 @@ public:
 	 * @return EDataValidationResult::Passed if valid, Failed/Invalid otherwise
 	 */
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
-
 };

@@ -35,14 +35,20 @@ EDataValidationResult UUnusedMacroValidator::ValidateLoadedAsset_Implementation(
 
 		for(UEdGraph* MacroGraph : Blueprint->MacroGraphs)
 		{
-			if(!MacroGraph) continue;
+			if (!MacroGraph)
+			{
+				continue;
+			}
 
 			const FName MacroName = MacroGraph->GetFName();
 			bool bIsMacroUsed = false;
 
 			for (UEdGraph* Graph : AllGraphs)
 			{
-				if (!Graph || Graph == MacroGraph) continue;
+				if (!Graph || Graph == MacroGraph)
+				{
+					continue;
+				}
 
 				for (UEdGraphNode* Node : Graph->Nodes)
 				{

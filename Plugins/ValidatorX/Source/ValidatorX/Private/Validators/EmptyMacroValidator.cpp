@@ -9,6 +9,8 @@
 #include "BlueprintEditor.h"
 #include "Misc/DataValidation.h"
 
+#include "Library/BPUtilsNodeFunctionLibrary.h"
+
 UEmptyMacroValidator::UEmptyMacroValidator()
 {
 	SetValidationEnabled(true);
@@ -29,18 +31,19 @@ EDataValidationResult UEmptyMacroValidator::ValidateLoadedAsset_Implementation(c
 {
 	bIsError = false;
 
-	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if(UBlueprint* const Blueprint = Cast<UBlueprint>(InAsset))
 	{
-		for(UEdGraph* MacroGraph : Blueprint->MacroGraphs)
+		for(UEdGraph* const MacroGraph : Blueprint->MacroGraphs)
 		{
-			if(!MacroGraph) continue;
+			if (!MacroGraph)
+			{
+				continue;
+			}
 
 			int32 UsefulNodeCount = 0;
-			for(UEdGraphNode* Node : MacroGraph->Nodes)
+			for(UEdGraphNode* const Node : MacroGraph->Nodes)
 			{
-				if(!Node) continue;
-
-				if(Node->IsA<UK2Node_Tunnel>())
+				if(!Node || Node->IsA<UK2Node_Tunnel>())
 				{
 					continue;
 				}
@@ -62,23 +65,7 @@ EDataValidationResult UEmptyMacroValidator::ValidateLoadedAsset_Implementation(c
 					FText::FromString(MacroGraph->GetName()));
 
 				Message->AddToken(FActionToken::Create(JumpToMacroText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
-						{
-							if(Blueprint && MacroGraph)
-							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-									if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-									{
-										if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-										{
-											BlueprintEditor->OpenGraphAndBringToFront(MacroGraph, true);
-										}
-									}
-								}
-							}
-						})));
+					FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::OpenGraphEditor, Blueprint, MacroGraph)));
 
 				const FText DeleteMacroText = FText::Format(
 					INVTEXT("'Fix' - Delete Macro - '{0}'"),

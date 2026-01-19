@@ -7,7 +7,7 @@
 #include "EmptyFunctionValidator.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class VALIDATORX_API UEmptyFunctionValidator : public UBlueprintValidatorBase
@@ -19,7 +19,7 @@ public:
 	virtual void SetValidationEnabled(bool bEnabled) override
 	{
 		static UEmptyFunctionValidator* CDO = GetMutableDefault<UEmptyFunctionValidator>();
-		if(bIsConfigDisabled)
+		if (bIsConfigDisabled)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Validator is disabled by config!"));
 			return;

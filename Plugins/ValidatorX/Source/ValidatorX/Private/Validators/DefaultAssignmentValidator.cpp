@@ -4,6 +4,7 @@
 #include "K2Node_VariableSet.h"
 #include "Misc/DataValidation.h"
 #include "BlueprintEditor.h"
+#include "Library/BPUtilsNodeFunctionLibrary.h"
 
 UDefaultAssignmentValidator::UDefaultAssignmentValidator()
 {
@@ -65,7 +66,7 @@ EDataValidationResult UDefaultAssignmentValidator::ValidateLoadedAsset_Implement
 
 								TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 								Message->AddToken(FActionToken::Create(FText::FromString("Jump to Node"), FText::GetEmpty(),
-									FSimpleDelegate::CreateUObject(this, &UDefaultAssignmentValidator::JumpToNode, Blueprint, Graph, VarSetNode)));
+									FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(VarSetNode))));
 
 								bIsError = true;
 							}
@@ -79,23 +80,3 @@ EDataValidationResult UDefaultAssignmentValidator::ValidateLoadedAsset_Implement
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 }
 
-void UDefaultAssignmentValidator::JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UK2Node_VariableSet* Node)
-{
-	if (Blueprint && Graph)
-	{
-		if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-		{
-			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-			{
-				if (IBlueprintEditor* BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
-				{
-					if (TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
-					{
-						GraphEditor->JumpToNode(Node, false);
-					}
-				}
-			}
-		}
-	}
-}

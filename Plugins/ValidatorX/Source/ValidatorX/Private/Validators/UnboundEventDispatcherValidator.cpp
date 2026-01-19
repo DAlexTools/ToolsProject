@@ -106,7 +106,7 @@ EDataValidationResult UUnboundEventDispatcherValidator::ValidateLoadedAsset_Impl
 				TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 				FText JumpToDispatcherText = FText::Format(INVTEXT("Jump to Dispatcher - '{0}'    "), FText::FromName(Dispatcher));
 				Message->AddToken(FActionToken::Create(JumpToDispatcherText, FText::FromString(""),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, Dispatcher]
 						{
 							if(Blueprint)
 							{
@@ -131,7 +131,7 @@ EDataValidationResult UUnboundEventDispatcherValidator::ValidateLoadedAsset_Impl
 
 				FText DeleteDispatcherText = FText::Format(INVTEXT("'Fix' - Delete Dispatcher - '{0}'"), FText::FromName(Dispatcher));
 				Message->AddToken(FActionToken::Create(DeleteDispatcherText, FText::FromString(""),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, Dispatcher]
 						{
 							if(Blueprint)
 							{

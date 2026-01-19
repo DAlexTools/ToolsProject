@@ -7,6 +7,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "BlueprintEditor.h"
 #include "Misc/DataValidation.h"
+#include "Library/BPUtilsNodeFunctionLibrary.h"
 
 UEmptyFunctionValidator::UEmptyFunctionValidator()
 {
@@ -63,7 +64,7 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 					FText::FromString(FunctionGraph->GetName()));
 
 				Message->AddToken(FActionToken::Create(JumpToFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda(this, &UEmptyFunctionValidator::OpenGraphEditor, Blueprint, FunctionGraph)));
+					FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::OpenGraphEditor, Blueprint, FunctionGraph)));
 
 				const FText DeleteFunctionText = FText::Format(
 					INVTEXT("'Fix' - Delete Function - '{0}'"),
@@ -113,25 +114,6 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 		}
 	}
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
-}
-
-
-void UEmptyFunctionValidator::OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph)
-{
-	if (Blueprint && Graph)
-	{
-		if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-		{
-			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-			{
-				if (FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-				{
-					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
-				}
-			}
-		}
-	}
 }
 
 

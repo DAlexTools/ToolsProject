@@ -4,6 +4,7 @@
 #include "K2Node_IfThenElse.h"
 #include "Misc/DataValidation.h"
 #include "BlueprintEditorModule.h"
+#include "Library/BPUtilsNodeFunctionLibrary.h"
 
 UEmptyBranchValidator::UEmptyBranchValidator()
 {
@@ -40,12 +41,12 @@ EDataValidationResult UEmptyBranchValidator::ValidateLoadedAsset_Implementation(
 					if (bThenUnconnected && bElseUnconnected)
 					{
 						const FText MessageText = FText::Format(
-							INVTEXT("Branch node in graph '{0}' has both 'Then' and 'Else' execution pins unconnected."),
+							INVTEXT("Branch node in graph '{0}' has both 'Then' and '	' execution pins unconnected."),
 							FText::FromString(Graph->GetName()));
 
 						TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 						Message->AddToken(FActionToken::Create(FText::FromString("Jump to Branch"), FText::GetEmpty(),
-							FSimpleDelegate::CreateUObject(this, &UEmptyBranchValidator::JumpToNode, Blueprint, Graph, Branch)));
+							FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(Branch))));
 
 						bIsError = true;
 					}
@@ -61,25 +62,4 @@ bool UEmptyBranchValidator::IsEnabled() const
 {
 	static const UEmptyBranchValidator* CDO = GetDefault<UEmptyBranchValidator>();
 	return CDO->bIsEnabled && !bIsConfigDisabled;
-}
-
-void UEmptyBranchValidator::JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UK2Node_IfThenElse* Node)
-{
-	if (Blueprint && Graph)
-	{
-		if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-		{
-			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-			{
-				if (IBlueprintEditor* BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
-				{
-					if (TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
-					{
-						GraphEditor->JumpToNode(Node, false);
-					}
-				}
-			}
-		}
-	}
 }

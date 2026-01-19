@@ -103,7 +103,7 @@ EDataValidationResult UUnusedNodeValidator::ValidateLoadedAsset_Implementation(c
 					const TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 
 					Message->AddToken(FActionToken::Create(FText::FromString("Jump to graph"), FText::FromString(""),
-						FSimpleDelegate::CreateLambda([=]
+						FSimpleDelegate::CreateLambda([Blueprint, Graph, Node]
 							{
 								if(Blueprint && Graph)
 								{

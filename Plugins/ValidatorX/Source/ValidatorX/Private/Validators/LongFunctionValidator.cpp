@@ -52,8 +52,6 @@ EDataValidationResult ULongFunctionValidator::ValidateLoadedAsset_Implementation
 				}
 			}
 
-
-
 			if(NodeCount > NodeLimit)
 			{
 				const FString GraphType = UBPUtilsNodeFunctionLibrary::GetGraphType(Blueprint, Graph);
@@ -70,24 +68,8 @@ EDataValidationResult ULongFunctionValidator::ValidateLoadedAsset_Implementation
 				Message->AddToken(FActionToken::Create(
 					JumpText,
 					FText::FromString(""),
-					FSimpleDelegate::CreateLambda([=]
-						{
-							if(Blueprint && Graph)
-							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
-									if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-									{
-										if(IBlueprintEditor* BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
-										{
-											BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
-										}
-									}
-								}
-							}
-						})));
+					FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::OpenGraphEditor, Blueprint, Graph)));
+				
 				bIsError = true;
 			}
 		}

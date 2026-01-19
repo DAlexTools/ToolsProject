@@ -98,7 +98,7 @@ EDataValidationResult UGlobalVariableNeverUsedValidator::ValidateLoadedAsset_Imp
 				Message->AddToken(FActionToken::Create(
 					FText::Format(INVTEXT("Jump to Variable - '{0}'"), FText::FromName(VarDesc.VarName)),
 					FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, VarDesc]
 						{
 							if(Blueprint)
 							{
@@ -123,7 +123,7 @@ EDataValidationResult UGlobalVariableNeverUsedValidator::ValidateLoadedAsset_Imp
 				Message->AddToken(FActionToken::Create(
 					FText::Format(INVTEXT("Fix - Delete Variable - '{0}'"), FText::FromName(VarDesc.VarName)),
 					FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([VarDesc, Blueprint]
 						{
 							if(Blueprint)
 							{

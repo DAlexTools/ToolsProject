@@ -111,7 +111,7 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 					FText::FromName(FunctionName));
 
 				Message->AddToken(FActionToken::Create(JumpToFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, FunctionGraph]
 						{
 							if(Blueprint && FunctionGraph)
 							{
@@ -123,7 +123,6 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 										if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
 										{
 											BlueprintEditor->OpenGraphAndBringToFront(FunctionGraph, true);
-
 											if(TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
 											{
 												MyBlueprintWidget->SelectItemByName(FunctionGraph->GetFName(),
@@ -150,7 +149,7 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 								{
 									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
 
-									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
+									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Blueprint, FunctionGraph, AssetEditorSubsystem, FunctionName] (float DeltaTime)
 										{
 											if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
 											{

@@ -139,7 +139,7 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 						Message->AddToken(FActionToken::Create(
 							INVTEXT("Jump to Branch"),
 							FText::GetEmpty(),
-							FSimpleDelegate::CreateUObject(this, &UDeadBranchValidator::JumpToNodeHandle, Blueprint, Graph, Node)));
+							FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::JumpToNode, Blueprint, Graph, Node)));
 
 						// Action: Delete branch node
 						Message->AddToken(FActionToken::Create(
@@ -157,26 +157,6 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 	}
 
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
-}
-
-void UDeadBranchValidator::JumpToNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
-{
-	if (Blueprint && Graph && Node)
-	{
-		UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-		AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
-		if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-		{
-			if (FBlueprintEditor* BPEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-			{
-				if (TSharedPtr<SGraphEditor> GraphEditor = BPEditor->OpenGraphAndBringToFront(Graph, true))
-				{
-					GraphEditor->JumpToNode(Node, false);
-				}
-			}
-		}
-	}
 }
 
 void UDeadBranchValidator::RemoveNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)

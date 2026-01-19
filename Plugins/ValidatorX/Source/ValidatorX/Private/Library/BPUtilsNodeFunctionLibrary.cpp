@@ -10,6 +10,8 @@
 #include "EdGraphNode_Comment.h"
 #include "K2Node_IfThenElse.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "BlueprintEditor.h"
 
 DEFINE_LOG_CATEGORY_STATIC(NodeFunctionLibraryLog, All, All);
 
@@ -414,4 +416,43 @@ bool UBPUtilsNodeFunctionLibrary::AreAllBranchExecsDisconnected(const UK2Node_If
 	}
 
 	return true;
+}
+
+void UBPUtilsNodeFunctionLibrary::OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph)
+{
+	if (Blueprint && Graph)
+	{
+		if (UAssetEditorSubsystem* const AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+		{
+			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+				{
+					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+				}
+			}
+		}
+	}
+}
+
+void UBPUtilsNodeFunctionLibrary::JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
+{
+	if (Blueprint && Graph)
+	{
+		if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+		{
+			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (IBlueprintEditor* BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
+				{
+					if (TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
+					{
+						GraphEditor->JumpToNode(Node, false);
+					}
+				}
+			}
+		}
+	}
 }
