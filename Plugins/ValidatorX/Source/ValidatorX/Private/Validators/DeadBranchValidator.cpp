@@ -195,4 +195,5 @@ void UDeadBranchValidator::RemoveNodeHandle(UBlueprint* Blueprint, UEdGraph* Gra
 	}
 }
 
+
 #undef LOCTEXT_NAMESPACE

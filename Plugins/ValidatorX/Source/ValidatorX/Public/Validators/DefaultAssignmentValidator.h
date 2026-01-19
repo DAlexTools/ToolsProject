@@ -6,8 +6,9 @@
 #include "BaseClasses/BlueprintValidatorBase.h"
 #include "DefaultAssignmentValidator.generated.h"
 
+class UK2Node_VariableSet;
 /**
- * 
+ *
  */
 UCLASS()
 class VALIDATORX_API UDefaultAssignmentValidator : public UBlueprintValidatorBase
@@ -19,7 +20,7 @@ public:
 	virtual void SetValidationEnabled(bool bEnabled) override
 	{
 		static UDefaultAssignmentValidator* CDO = GetMutableDefault<UDefaultAssignmentValidator>();
-		if(bIsConfigDisabled)
+		if (bIsConfigDisabled)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Validator is disabled by config!"));
 			return;
@@ -28,7 +29,6 @@ public:
 		CDO->bIsEnabled = bEnabled;
 		SaveConfig();
 	}
-
 
 	/**
 	 * Checks if the validator is currently enabled.
@@ -57,4 +57,6 @@ public:
 	 */
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 
+private:
+	void JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UK2Node_VariableSet* InNode);
 };
