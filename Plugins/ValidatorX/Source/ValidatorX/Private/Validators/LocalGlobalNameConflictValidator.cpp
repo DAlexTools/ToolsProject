@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Validators/LocalGlobalNameConflictValidator.h"
@@ -121,7 +121,7 @@ EDataValidationResult ULocalGlobalNameConflictValidator::ValidateLoadedAsset_Imp
 											{
 												if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
 												{
-													if(TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
+													if(TSharedPtr<SGraphEditor> const GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
 													{
 														if(BlueprintEditor->GetMyBlueprintWidget().IsValid())
 														{

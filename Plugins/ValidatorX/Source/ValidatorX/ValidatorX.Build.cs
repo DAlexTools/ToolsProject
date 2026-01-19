@@ -46,6 +46,7 @@ public class ValidatorX : ModuleRules
 				"ToolMenus",
 				"AssetRegistry",
                 "WorkspaceMenuStructure",
+				"DeveloperSettings"
             }
 			);
 		

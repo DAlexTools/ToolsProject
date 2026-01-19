@@ -7,19 +7,6 @@
 #include "GameProjectUtils.h"
 
 /**
- * @brief Enumeration defining the domain type of a generated class.
- *
- * This enum specifies whether a generated C++ class is intended to be used
- * as a Blueprint base class or as a native C++-only class. This distinction
- * affects how the class is configured during template generation.
- */
-enum class EClassDomain : uint8
-{
-	Blueprint, /**< @brief Class will be exposed to Blueprint system and can be extended in Blueprints. */
-	Native	   /**< @brief Class is intended for C++ use only and won't be exposed to Blueprints. */
-};
-
-/**
  * @brief Main module class for the C++ Template Generator plugin.
  *
  * This class implements the IModuleInterface and serves as the entry point
@@ -79,8 +66,8 @@ public:
 	 *                        defined in UCppTemplateGeneratorSettings.
 	 *
 	 *
-	 * @see UCppTemplateGeneratorSettings::TemplateClasses
-	 */
+		 * @see UCppTemplateGeneratorSettings::TemplateClasses
+		 */
 	void OpenCreateTemplateForClass(UClass* ParentClass);
 
 	/**

@@ -28,7 +28,7 @@ void FCppTemplateGeneratorModule::ShutdownModule()
 	if (UToolMenus::IsToolMenuUIEnabled())
 	{
 		const UToolMenus* const ToolMenus = UToolMenus::Get();
-		if (ToolMenus)
+		if (IsValid(ToolMenus))
 		{
 			ToolMenus->UnregisterOwner(this);
 		}
@@ -41,7 +41,7 @@ void FCppTemplateGeneratorModule::RegisterMenus()
 	FToolMenuSection& Section = Menu->AddSection("Programming", LOCTEXT("ProgrammingHeading", "Programming"));
 
 	const UCppTemplateGeneratorSettings* const Settings = GetDefault<UCppTemplateGeneratorSettings>();
-	if (!Settings)
+	if (!IsValid(Settings))
 	{
 		return;
 	}
@@ -50,12 +50,13 @@ void FCppTemplateGeneratorModule::RegisterMenus()
 		"CreateCppTemplate",
 		LOCTEXT("CreateCppTemplateLabel", "New C++ Template..."),
 		LOCTEXT("CreateCppTemplateTooltip", "Create a C++ class from your predefined template"),
-		FNewToolMenuDelegate::CreateLambda([this, Settings](UToolMenu* InMenu) {
+		FNewToolMenuDelegate::CreateLambda([this, Settings](UToolMenu* InMenu) 
+		{
 			FToolMenuSection& SubSection = InMenu->AddSection("CppTemplateSection");
 
-			for (TSubclassOf<UObject> TemplateClass : Settings->TemplateClasses)
+			for (const TSubclassOf<UObject> TemplateClass : Settings->TemplateClasses)
 			{
-				if (!TemplateClass)
+				if (!IsValid(TemplateClass))
 				{
 					continue;
 				}
@@ -79,7 +80,7 @@ void FCppTemplateGeneratorModule::RegisterMenus()
 
 void FCppTemplateGeneratorModule::OpenCreateTemplateForClass(UClass* ParentClass)
 {
-	if (!ParentClass)
+	if (!IsValid(ParentClass))
 	{
 		UE_LOG(CppTemplateGeneratorLog, Warning, TEXT("OpenCreateTemplateForClass called with null ParentClass"));
 		return;

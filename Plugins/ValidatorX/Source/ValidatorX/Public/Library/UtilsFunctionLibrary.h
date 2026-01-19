@@ -23,3 +23,25 @@ public:
 	 */
 	[[nodiscard]] static FString AddSpacesBeforeUppercase(const FString& Input);
 };
+
+
+
+class FBlueprintHelper final
+{
+public:
+	FORCEINLINE static UAssetEditorSubsystem* OpenBlueprintEditor(UBlueprint* Blueprint)
+	{
+		if (!IsValid(Blueprint) || !GEditor)
+		{
+			return nullptr;
+		}
+
+		UAssetEditorSubsystem* const AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+		if (IsValid(AssetEditorSubsystem))
+		{
+			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+			return AssetEditorSubsystem;
+		}
+		return nullptr;
+	}
+};
