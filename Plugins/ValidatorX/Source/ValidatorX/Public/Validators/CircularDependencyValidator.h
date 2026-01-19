@@ -7,7 +7,7 @@
 #include "CircularDependencyValidator.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class VALIDATORX_API UCircularDependencyValidator : public UBlueprintValidatorBase
@@ -18,7 +18,6 @@ public:
 	UCircularDependencyValidator();
 
 	virtual void SetValidationEnabled(bool bEnabled) override;
-
 
 	/**
 	 * Checks if the validator is currently enabled.
@@ -47,10 +46,9 @@ public:
 	 */
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 
-
 private:
-	bool HasCircularDependency(UBlueprint* Blueprint, FDataValidationContext& Context);
-	bool DetectCycle(const FName& StartName, TMap<FName, TArray<FName>>& GraphMap, TSet<FName>& Visited, TSet<FName>& Stack, TArray<FName>& OutCyclePath);
+	bool	  HasCircularDependency(UBlueprint* Blueprint, FDataValidationContext& Context);
+	bool	  DetectCycle(const FName& StartName, TMap<FName, TArray<FName>>& GraphMap, TSet<FName>& Visited, TSet<FName>& Stack, TArray<FName>& OutCyclePath);
 	UEdGraph* FindGraphByName(UBlueprint* Blueprint, const FName& GraphName);
-
+	void	  OpenGraphEditor(UEdGraph* TargetGraph, UBlueprint* Blueprint);
 };

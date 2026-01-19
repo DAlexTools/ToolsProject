@@ -126,21 +126,7 @@ bool UCircularDependencyValidator::HasCircularDependency(UBlueprint* Blueprint, 
 				Message->AddToken(FActionToken::Create(
 					FText::FromString("Jump to graph"),
 					FText::FromString("Opens the first function or macro involved in the circular call"),
-					FSimpleDelegate::CreateLambda([Blueprint, TargetGraph] ()
-						{
-							if(UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-							{
-								Subsystem->OpenEditorForAsset(Blueprint);
-								if(IAssetEditorInstance* EditorInstance = Subsystem->FindEditorForAsset(Blueprint, false))
-								{
-									if(IBlueprintEditor* BPEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
-									{
-										BPEditor->OpenGraphAndBringToFront(TargetGraph, true);
-									}
-								}
-							}
-						})
-				));
+					FSimpleDelegate::CreateUObject(this, &UCircularDependencyValidator::OpenGraphEditor, TargetGraph, Blueprint)));
 			}
 
 			return true;
@@ -180,6 +166,22 @@ bool UCircularDependencyValidator::DetectCycle(const FName& StartName, TMap<FNam
 
 	Stack.Remove(StartName);
 	return false;
+}
+
+
+void UCircularDependencyValidator::OpenGraphEditor(UEdGraph* TargetGraph, UBlueprint* Blueprint)
+{
+	if (UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+	{
+		Subsystem->OpenEditorForAsset(Blueprint);
+		if (IAssetEditorInstance* EditorInstance = Subsystem->FindEditorForAsset(Blueprint, false))
+		{
+			if (IBlueprintEditor* BPEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
+			{
+				BPEditor->OpenGraphAndBringToFront(TargetGraph, true);
+			}
+		}
+	}
 }
 
 
