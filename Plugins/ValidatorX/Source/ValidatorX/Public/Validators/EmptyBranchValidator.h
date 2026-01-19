@@ -6,8 +6,11 @@
 #include "BaseClasses/BlueprintValidatorBase.h"
 #include "EmptyBranchValidator.generated.h"
 
+
+class UK2Node_IfThenElse;
+
 /**
- * 
+ *
  */
 UCLASS()
 class VALIDATORX_API UEmptyBranchValidator : public UBlueprintValidatorBase
@@ -20,7 +23,7 @@ public:
 	virtual void SetValidationEnabled(bool bEnabled) override
 	{
 		static UEmptyBranchValidator* CDO = GetMutableDefault<UEmptyBranchValidator>();
-		if(bIsConfigDisabled)
+		if (bIsConfigDisabled)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Validator is disabled by config!"));
 			return;
@@ -29,7 +32,6 @@ public:
 		CDO->bIsEnabled = bEnabled;
 		SaveConfig();
 	}
-
 
 	/**
 	 * Checks if the validator is currently enabled.
@@ -57,5 +59,7 @@ public:
 	 * @return EDataValidationResult::Passed if valid, Failed/Invalid otherwise
 	 */
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
-	
+
+private:
+	void JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UK2Node_IfThenElse* Node);
 };

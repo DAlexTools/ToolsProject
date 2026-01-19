@@ -63,30 +63,14 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 					FText::FromString(FunctionGraph->GetName()));
 
 				Message->AddToken(FActionToken::Create(JumpToFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
-						{
-							if(Blueprint && FunctionGraph)
-							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-									if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-									{
-										if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-										{
-											BlueprintEditor->OpenGraphAndBringToFront(FunctionGraph, true);
-										}
-									}
-								}
-							}
-						})));
+					FSimpleDelegate::CreateLambda(this, &UEmptyFunctionValidator::OpenGraphEditor, Blueprint, FunctionGraph)));
 
 				const FText DeleteFunctionText = FText::Format(
 					INVTEXT("'Fix' - Delete Function - '{0}'"),
 					FText::FromString(FunctionGraph->GetName()));
 
 				Message->AddToken(FActionToken::Create(DeleteFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, FunctionGraph]
 						{
 							if(Blueprint && FunctionGraph)
 							{
@@ -129,6 +113,25 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 		}
 	}
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
+}
+
+
+void UEmptyFunctionValidator::OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph)
+{
+	if (Blueprint && Graph)
+	{
+		if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+		{
+			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+				{
+					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+				}
+			}
+		}
+	}
 }
 
 
