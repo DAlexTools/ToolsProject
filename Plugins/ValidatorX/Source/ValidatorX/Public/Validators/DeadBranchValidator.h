@@ -7,7 +7,7 @@
 #include "DeadBranchValidator.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class VALIDATORX_API UDeadBranchValidator : public UBlueprintValidatorBase
@@ -20,7 +20,7 @@ public:
 	virtual void SetValidationEnabled(bool bEnabled) override
 	{
 		static UDeadBranchValidator* CDO = GetMutableDefault<UDeadBranchValidator>();
-		if(bIsConfigDisabled)
+		if (bIsConfigDisabled)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Validator is disabled by config!"));
 			return;
@@ -29,7 +29,7 @@ public:
 		CDO->bIsEnabled = bEnabled;
 		SaveConfig();
 	}
-	
+
 	/**
 	 * Checks if the validator is currently enabled.
 	 *
@@ -47,7 +47,6 @@ public:
 	 */
 	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const override;
 
-
 	/**
 	 * Performs validation on a loaded asset.
 	 *
@@ -58,4 +57,7 @@ public:
 	 */
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
 
+private:
+	void JumpToNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node);
+	void RemoveNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node);
 };

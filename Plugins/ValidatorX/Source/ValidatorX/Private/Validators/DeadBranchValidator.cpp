@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Validators/DeadBranchValidator.h"
 
 #include "K2Node_IfThenElse.h"
@@ -14,8 +13,6 @@
 #include "Library/BPUtilsNodeFunctionLibrary.h"
 #define LOCTEXT_NAMESPACE "ValidatorX"
 
-
-
 UDeadBranchValidator::UDeadBranchValidator()
 {
 	SetValidationEnabled(true);
@@ -25,7 +22,6 @@ bool UDeadBranchValidator::IsEnabled() const
 {
 	static const UDeadBranchValidator* CDO = GetDefault<UDeadBranchValidator>();
 	return CDO->bIsEnabled && !bIsConfigDisabled;
-
 }
 
 bool UDeadBranchValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InObject, FDataValidationContext& InContext) const
@@ -37,56 +33,62 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 {
 	bIsError = false;
 
-	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		TArray<UEdGraph*> Graphs;
 		Blueprint->GetAllGraphs(Graphs);
 
-		for(UEdGraph* Graph : Graphs)
+		for (UEdGraph* Graph : Graphs)
 		{
-			if(!Graph) continue;
-
-			for(UEdGraphNode* Node : Graph->Nodes)
+			if (!Graph)
 			{
-				if(UK2Node_IfThenElse* Branch = Cast<UK2Node_IfThenElse>(Node))
-				{
-					UEdGraphPin* Cond = Branch->GetConditionPin();
-					if(!Cond) continue;
+				continue;
+			}
 
-					bool bIsDead = false;
+			for (UEdGraphNode* Node : Graph->Nodes)
+			{
+				if (UK2Node_IfThenElse* Branch = Cast<UK2Node_IfThenElse>(Node))
+				{
+					UEdGraphPin* Condition = Branch->GetConditionPin();
+					if (!Condition)
+					{
+						continue;
+					}
+
+					bool	bIsDead = false;
 					FString Info;
 
 					// Case 1: Literal condition
-					if(Cond->LinkedTo.Num() == 0)
+					if (Condition->LinkedTo.Num() == 0)
 					{
-						if(Cond->DefaultValue == "true" || Cond->DefaultValue == "false")
+						if (Condition->DefaultValue == "true" || Condition->DefaultValue == "false")
 						{
 							bIsDead = true;
-							Info = FString::Printf(TEXT("Branch with literal condition '%s'"), *Cond->DefaultValue);
+							Info = FString::Printf(TEXT("Branch with literal condition '%s'"), *Condition->DefaultValue);
 						}
 					}
 
 					// Case 2: Variable condition (unused)
-					else if(Cond->LinkedTo.Num() == 1)
+					else if (Condition->LinkedTo.Num() == 1)
 					{
-						if(UK2Node_VariableGet* GetNode = Cast<UK2Node_VariableGet>(Cond->LinkedTo[0]->GetOwningNode()))
+						if (UK2Node_VariableGet* GetNode = Cast<UK2Node_VariableGet>(Condition->LinkedTo[0]->GetOwningNode()))
 						{
-							FName VarName = GetNode->GetVarName();
+							FName	VarName = GetNode->GetVarName();
 							FString SourceInfo;
-							bool bFoundSet = UBPUtilsNodeFunctionLibrary::IsBoolVariableSetInThisOrParentBPs(Blueprint, VarName, &SourceInfo);
+							bool	bFoundSet = UBPUtilsNodeFunctionLibrary::IsBoolVariableSetInThisOrParentBPs(Blueprint, VarName, &SourceInfo);
 
 							// Not found in this BP
-							if(!bFoundSet)
+							if (!bFoundSet)
 							{
 								bool bCDOValue = false;
 
-								if(UClass* GeneratedClass = Blueprint->GeneratedClass)
+								if (UClass* GeneratedClass = Blueprint->GeneratedClass)
 								{
-									if(UObject* CDO = GeneratedClass->GetDefaultObject())
+									if (UObject* CDO = GeneratedClass->GetDefaultObject())
 									{
-										if(FProperty* Property = GeneratedClass->FindPropertyByName(VarName))
+										if (FProperty* Property = GeneratedClass->FindPropertyByName(VarName))
 										{
-											if(FBoolProperty* BoolProp = CastField<FBoolProperty>(Property))
+											if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Property))
 											{
 												bCDOValue = BoolProp->GetPropertyValue_InContainer(CDO);
 											}
@@ -103,34 +105,33 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 					}
 
 					// Case 3: No logic on Then/Else
-					auto AreAllBranchExecsDisconnected = [] (UK2Node_IfThenElse* BranchNode)
+					auto AreAllBranchExecsDisconnected = [](UK2Node_IfThenElse* BranchNode) 
+					{
+						for (UEdGraphPin* Pin : BranchNode->Pins)
 						{
-							for(UEdGraphPin* Pin : BranchNode->Pins)
+							if (Pin->Direction == EGPD_Output && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
 							{
-								if(Pin->Direction == EGPD_Output && Pin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+								if ((Pin->PinName == "Then" || Pin->PinName == "Else") && Pin->LinkedTo.Num() > 0)
 								{
-									if((Pin->PinName == "Then" || Pin->PinName == "Else") && Pin->LinkedTo.Num() > 0)
-									{
-										return false;
-									}
+									return false;
 								}
 							}
-							return true;
-						};
+						}
+						return true;
+					};
 
-					if(!bIsDead && AreAllBranchExecsDisconnected(Branch))
+					if (!bIsDead && AreAllBranchExecsDisconnected(Branch))
 					{
 						bIsDead = true;
 						Info = TEXT("Branch has no execution logic on either output (Then/Else not connected)");
 					}
 
-					if(bIsDead)
+					if (bIsDead)
 					{
 						const FText Msg = FText::Format(
 							LOCTEXT("DeadBranch", "Dead branch detected in Graph '{0}': {1}"),
 							FText::FromString(Graph->GetName()),
-							FText::FromString(Info)
-						);
+							FText::FromString(Info));
 
 						const TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, Msg);
 
@@ -138,48 +139,13 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 						Message->AddToken(FActionToken::Create(
 							INVTEXT("Jump to Branch"),
 							FText::GetEmpty(),
-							FSimpleDelegate::CreateLambda([=]
-								{
-									if(Blueprint && Graph && Node)
-									{
-										UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-										AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
-										if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-										{
-											if(FBlueprintEditor* BPEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-											{
-												if(TSharedPtr<SGraphEditor> GraphEditor = BPEditor->OpenGraphAndBringToFront(Graph, true))
-												{
-													GraphEditor->JumpToNode(Node, false);
-												}
-											}
-										}
-									}
-								})
-						));
+							FSimpleDelegate::CreateUObject(this, &UDeadBranchValidator::JumpToNodeHandle, Blueprint, Graph, Node)));
 
 						// Action: Delete branch node
 						Message->AddToken(FActionToken::Create(
 							FText::FromString(FString::Printf(TEXT("Fix: Delete Branch node in '%s'"), *Graph->GetName())),
 							FText::GetEmpty(),
-							FSimpleDelegate::CreateLambda([=]
-								{
-									if(Blueprint && Graph && Node)
-									{
-										const FText ConfirmText = FText::Format(
-											INVTEXT("Are you sure you want to delete this Branch node from Graph '{0}'?"),
-											FText::FromString(Graph->GetName())
-										);
-
-										if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
-										{
-											Graph->RemoveNode(Node);
-											FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-										}
-									}
-								})
-						));
+							FSimpleDelegate::CreateUObject(this, &UDeadBranchValidator::RemoveNodeHandle, Blueprint, Graph, Node)));
 
 						Node->NodeComment = TEXT("Dead branch detected");
 						Node->bCommentBubbleVisible = true;
@@ -193,5 +159,40 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 }
 
+void UDeadBranchValidator::JumpToNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
+{
+	if (Blueprint && Graph && Node)
+	{
+		UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+		AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+
+		if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+		{
+			if (FBlueprintEditor* BPEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+			{
+				if (TSharedPtr<SGraphEditor> GraphEditor = BPEditor->OpenGraphAndBringToFront(Graph, true))
+				{
+					GraphEditor->JumpToNode(Node, false);
+				}
+			}
+		}
+	}
+}
+
+void UDeadBranchValidator::RemoveNodeHandle(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
+{
+	if (Blueprint && Graph && Node)
+	{
+		const FText ConfirmText = FText::Format(
+			INVTEXT("Are you sure you want to delete this Branch node from Graph '{0}'?"),
+			FText::FromString(Graph->GetName()));
+
+		if (FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
+		{
+			Graph->RemoveNode(Node);
+			FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+		}
+	}
+}
 
 #undef LOCTEXT_NAMESPACE
