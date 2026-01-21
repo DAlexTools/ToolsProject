@@ -9,7 +9,7 @@
 #include "BlueprintEditor.h"
 #include "Misc/DataValidation.h"
 
-#include "Library/BPUtilsNodeFunctionLibrary.h"
+#include "Library/UtilsFunctionLibrary.h"
 
 UEmptyMacroValidator::UEmptyMacroValidator()
 {
@@ -65,7 +65,7 @@ EDataValidationResult UEmptyMacroValidator::ValidateLoadedAsset_Implementation(c
 					FText::FromString(MacroGraph->GetName()));
 
 				Message->AddToken(FActionToken::Create(JumpToMacroText, FText::GetEmpty(),
-					FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::OpenGraphEditor, Blueprint, MacroGraph)));
+					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphEditor, Blueprint, MacroGraph)));
 
 				const FText DeleteMacroText = FText::Format(
 					INVTEXT("'Fix' - Delete Macro - '{0}'"),

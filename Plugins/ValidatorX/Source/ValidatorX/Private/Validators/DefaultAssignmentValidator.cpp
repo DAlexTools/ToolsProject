@@ -4,7 +4,7 @@
 #include "K2Node_VariableSet.h"
 #include "Misc/DataValidation.h"
 #include "BlueprintEditor.h"
-#include "Library/BPUtilsNodeFunctionLibrary.h"
+#include "Library/UtilsFunctionLibrary.h"
 
 UDefaultAssignmentValidator::UDefaultAssignmentValidator()
 {
@@ -66,7 +66,7 @@ EDataValidationResult UDefaultAssignmentValidator::ValidateLoadedAsset_Implement
 
 								TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 								Message->AddToken(FActionToken::Create(FText::FromString("Jump to Node"), FText::GetEmpty(),
-									FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(VarSetNode))));
+									FSimpleDelegate::CreateStatic(&FBlueprintHelper::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(VarSetNode))));
 
 								bIsError = true;
 							}

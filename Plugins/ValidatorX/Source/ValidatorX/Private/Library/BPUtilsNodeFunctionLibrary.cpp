@@ -7,7 +7,7 @@
 #include "K2Node_VariableGet.h"
 #include "K2Node_VariableSet.h"
 #include "K2Node_MacroInstance.h"
-#include "EdGraphNode_Comment.h"
+#include "SMyBlueprint.h"
 #include "K2Node_IfThenElse.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -418,41 +418,72 @@ bool UBPUtilsNodeFunctionLibrary::AreAllBranchExecsDisconnected(const UK2Node_If
 	return true;
 }
 
-void UBPUtilsNodeFunctionLibrary::OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph)
-{
-	if (Blueprint && Graph)
-	{
-		if (UAssetEditorSubsystem* const AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-		{
-			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-			{
-				if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-				{
-					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
-				}
-			}
-		}
-	}
-}
+// void UBPUtilsNodeFunctionLibrary::OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph)
+// {
+// 	if (!Blueprint || !Graph)
+// 	{
+// 		return;
+// 	}
+// 
+// 	if (UAssetEditorSubsystem* const AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>(); IsValid(AssetEditorSubsystem))
+// 	{
+// 		AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+// 		if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+// 		{
+// 			if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+// 			{
+// 				BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+// 			}
+// 		}
+// 	}
+// }
 
-void UBPUtilsNodeFunctionLibrary::JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
-{
-	if (Blueprint && Graph)
-	{
-		if (UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-		{
-			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-			{
-				if (IBlueprintEditor* BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
-				{
-					if (TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
-					{
-						GraphEditor->JumpToNode(Node, false);
-					}
-				}
-			}
-		}
-	}
-}
+//void UBPUtilsNodeFunctionLibrary::JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
+//{
+//	if (!Blueprint || !Graph)
+//	{
+//		return;
+//	}
+//
+//	if (UAssetEditorSubsystem* const AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>(); IsValid(AssetEditorSubsystem))
+//	{
+//		AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+//		if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+//		{
+//			if (IBlueprintEditor* const BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
+//			{
+//				if (const TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
+//				{
+//					GraphEditor->JumpToNode(Node, false);
+//				}
+//			}
+//		}
+//	}
+//}
+
+// void UBPUtilsNodeFunctionLibrary::OpenGraphAndSelectItem(UBlueprint* Blueprint, UEdGraph* Graph)
+// {
+// 	if (!Blueprint || !Graph)
+// 	{
+// 		return;
+// 	}
+// 
+// 	if (UAssetEditorSubsystem* const AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>(); IsValid(AssetEditorSubsystem))
+// 	{
+// 		AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+// 		if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+// 		{
+// 			if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+// 			{
+// 				BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+// 				if (const TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
+// 				{
+// 					MyBlueprintWidget->SelectItemByName(Graph->GetFName(),
+// 						ESelectInfo::Direct,
+// 						INDEX_NONE,
+// 						false);
+// 				}
+// 			}
+// 		}
+// 	}
+// }

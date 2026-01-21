@@ -8,6 +8,8 @@
 #include "Misc/DataValidation.h"
 #include "SMyBlueprint.h"
 #include "Library/BPUtilsNodeFunctionLibrary.h"
+#include "Library/UtilsFunctionLibrary.h"
+
 
 
 UUnusedFunctionValidator::UUnusedFunctionValidator()
@@ -111,37 +113,14 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 					FText::FromName(FunctionName));
 
 				Message->AddToken(FActionToken::Create(JumpToFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([Blueprint, FunctionGraph]
-						{
-							if(Blueprint && FunctionGraph)
-							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-									if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-									{
-										if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-										{
-											BlueprintEditor->OpenGraphAndBringToFront(FunctionGraph, true);
-											if(TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
-											{
-												MyBlueprintWidget->SelectItemByName(FunctionGraph->GetFName(),
-													ESelectInfo::Direct,
-													INDEX_NONE,
-													false);
-											}
-										}
-									}
-								}
-							}
-						})));
+					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphAndSelectItem, Blueprint, FunctionGraph)));
 
 				const FText DeleteFunctionText = FText::Format(
 					INVTEXT("'Fix' - Delete Function - '{0}'"),
 					FText::FromName(FunctionName));
 
 				Message->AddToken(FActionToken::Create(DeleteFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, FunctionGraph, FunctionName]
 						{
 							if(Blueprint && FunctionGraph)
 							{

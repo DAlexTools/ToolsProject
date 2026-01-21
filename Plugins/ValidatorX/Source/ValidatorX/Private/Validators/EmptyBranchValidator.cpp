@@ -5,6 +5,7 @@
 #include "Misc/DataValidation.h"
 #include "BlueprintEditorModule.h"
 #include "Library/BPUtilsNodeFunctionLibrary.h"
+#include "Library/UtilsFunctionLibrary.h"
 
 UEmptyBranchValidator::UEmptyBranchValidator()
 {
@@ -46,7 +47,7 @@ EDataValidationResult UEmptyBranchValidator::ValidateLoadedAsset_Implementation(
 
 						TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 						Message->AddToken(FActionToken::Create(FText::FromString("Jump to Branch"), FText::GetEmpty(),
-							FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(Branch))));
+							FSimpleDelegate::CreateStatic(&FBlueprintHelper::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(Branch))));
 
 						bIsError = true;
 					}

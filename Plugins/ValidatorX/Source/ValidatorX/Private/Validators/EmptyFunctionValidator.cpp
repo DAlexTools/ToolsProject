@@ -7,7 +7,7 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "BlueprintEditor.h"
 #include "Misc/DataValidation.h"
-#include "Library/BPUtilsNodeFunctionLibrary.h"
+#include "Library/UtilsFunctionLibrary.h"
 
 UEmptyFunctionValidator::UEmptyFunctionValidator()
 {
@@ -64,7 +64,7 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 					FText::FromString(FunctionGraph->GetName()));
 
 				Message->AddToken(FActionToken::Create(JumpToFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::OpenGraphEditor, Blueprint, FunctionGraph)));
+					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphEditor, Blueprint, FunctionGraph)));
 
 				const FText DeleteFunctionText = FText::Format(
 					INVTEXT("'Fix' - Delete Function - '{0}'"),
@@ -75,10 +75,8 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 						{
 							if(Blueprint && FunctionGraph)
 							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+								if(UAssetEditorSubsystem* AssetEditorSubsystem = FBlueprintHelper::OpenBlueprintEditor(Blueprint))
 								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
 									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
 										{
 											if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, /*bFocusIfOpen=*/false))

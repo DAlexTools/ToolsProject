@@ -7,10 +7,12 @@
 #include "K2Node_VariableSet.h"
 #include "EdGraph/EdGraph.h"
 #include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/BlueprintEditorUtils.h"
 #include "Misc/DataValidation.h"
 #include "SMyBlueprint.h"
+#include "Library/UtilsFunctionLibrary.h"
 #include "Library/BPUtilsNodeFunctionLibrary.h"
+
+
 #define LOCTEXT_NAMESPACE "ValidatorX"
 
 UDeadBranchValidator::UDeadBranchValidator()
@@ -139,7 +141,7 @@ EDataValidationResult UDeadBranchValidator::ValidateLoadedAsset_Implementation(c
 						Message->AddToken(FActionToken::Create(
 							INVTEXT("Jump to Branch"),
 							FText::GetEmpty(),
-							FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::JumpToNode, Blueprint, Graph, Node)));
+							FSimpleDelegate::CreateStatic(&FBlueprintHelper::JumpToNode, Blueprint, Graph, Node)));
 
 						// Action: Delete branch node
 						Message->AddToken(FActionToken::Create(

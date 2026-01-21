@@ -160,8 +160,10 @@ public:
 	 */
 	static bool AreAllBranchExecsDisconnected(const UK2Node_IfThenElse* Branch);
 
+	// static void OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph);
+	// 
+	// static void OpenGraphAndSelectItem(UBlueprint* Blueprint, UEdGraph* Graph);
 
-	static void OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph);
 
-	static void JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node);
 };
+

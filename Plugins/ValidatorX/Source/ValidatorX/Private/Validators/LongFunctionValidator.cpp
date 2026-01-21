@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Validators/LongFunctionValidator.h"
 #include "K2Node_FunctionEntry.h"
 #include "K2Node_FunctionResult.h"
@@ -8,7 +7,7 @@
 #include "BlueprintEditorModule.h"
 #include "Misc/DataValidation.h"
 #include "Library/BPUtilsNodeFunctionLibrary.h"
-
+#include "Library/UtilsFunctionLibrary.h"
 ULongFunctionValidator::ULongFunctionValidator()
 {
 	SetValidationEnabled(true);
@@ -30,7 +29,7 @@ EDataValidationResult ULongFunctionValidator::ValidateLoadedAsset_Implementation
 	constexpr int32 NodeLimit = 200;
 	bIsError = false;
 
-	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
 
 		TArray<UEdGraph*> AllGraphs = Blueprint->UbergraphPages;
@@ -39,37 +38,37 @@ EDataValidationResult ULongFunctionValidator::ValidateLoadedAsset_Implementation
 		AllGraphs.Append(Blueprint->DelegateSignatureGraphs);
 		AllGraphs.Append(Blueprint->IntermediateGeneratedGraphs);
 
-		for(UEdGraph* Graph : AllGraphs)
+		for (UEdGraph* Graph : AllGraphs)
 		{
-			if(!Graph) continue;
+			if (!Graph)
+				continue;
 
 			int32 NodeCount = 0;
-			for(UEdGraphNode* Node : Graph->Nodes)
+			for (UEdGraphNode* Node : Graph->Nodes)
 			{
-				if(Node && !Node->IsA<UK2Node_FunctionEntry>() && !Node->IsA<UK2Node_FunctionResult>())
+				if (Node && !Node->IsA<UK2Node_FunctionEntry>() && !Node->IsA<UK2Node_FunctionResult>())
 				{
 					NodeCount++;
 				}
 			}
 
-			if(NodeCount > NodeLimit)
+			if (NodeCount > NodeLimit)
 			{
 				const FString GraphType = UBPUtilsNodeFunctionLibrary::GetGraphType(Blueprint, Graph);
-				const FText MessageText = FText::Format(
-					INVTEXT("'{0}' - '{1}' contains {2} nodes, which exceeds the recommended limit of {3}. Consider splitting it into smaller functions."),
-					FText::FromString(GraphType),
-					FText::FromString(Graph->GetName()),
-					FText::AsNumber(NodeCount),
-					FText::AsNumber(NodeLimit)
-				);
+				const FText	  MessageText = FText::Format(
+					  INVTEXT("'{0}' - '{1}' contains {2} nodes, which exceeds the recommended limit of {3}. Consider splitting it into smaller functions."),
+					  FText::FromString(GraphType),
+					  FText::FromString(Graph->GetName()),
+					  FText::AsNumber(NodeCount),
+					  FText::AsNumber(NodeLimit));
 				const FText JumpText = FText::Format(INVTEXT("Jump to '{0}' - {1}"), FText::FromString(Graph->GetName()), FText::FromString(GraphType));
 
 				TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 				Message->AddToken(FActionToken::Create(
 					JumpText,
 					FText::FromString(""),
-					FSimpleDelegate::CreateStatic(&UBPUtilsNodeFunctionLibrary::OpenGraphEditor, Blueprint, Graph)));
-				
+					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphEditor, Blueprint, Graph)));
+
 				bIsError = true;
 			}
 		}

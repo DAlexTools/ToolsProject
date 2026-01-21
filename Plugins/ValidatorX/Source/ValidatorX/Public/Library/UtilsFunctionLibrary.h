@@ -3,6 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BlueprintEditor.h"
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "SMyBlueprint.h"
 
 /**
  * @brief Utility function library for string and general helper functions.
@@ -24,8 +27,6 @@ public:
 	[[nodiscard]] static FString AddSpacesBeforeUppercase(const FString& Input);
 };
 
-
-
 class FBlueprintHelper final
 {
 public:
@@ -43,5 +44,73 @@ public:
 			return AssetEditorSubsystem;
 		}
 		return nullptr;
+	}
+
+	FORCEINLINE static void OpenGraphEditor(UBlueprint* Blueprint, UEdGraph* Graph)
+	{
+		if (!Blueprint || !Graph)
+		{
+			return;
+		}
+
+		if (UAssetEditorSubsystem* const AssetEditorSubsystem = OpenBlueprintEditor(Blueprint))
+		{
+			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+				{
+					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+				}
+			}
+		}
+	}
+
+	FORCEINLINE static void OpenGraphAndSelectItem(UBlueprint* Blueprint, UEdGraph* Graph)
+	{
+		if (!Blueprint || !Graph)
+		{
+			return;
+		}
+
+		if (UAssetEditorSubsystem* const AssetEditorSubsystem = OpenBlueprintEditor(Blueprint))
+		{
+			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
+			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+				{
+					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+					if (const TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
+					{
+						MyBlueprintWidget->SelectItemByName(Graph->GetFName(),
+							ESelectInfo::Direct,
+							INDEX_NONE,
+							false);
+					}
+				}
+			}
+		}
+	}
+
+	FORCEINLINE static void JumpToNode(UBlueprint* Blueprint, UEdGraph* Graph, UEdGraphNode* Node)
+	{
+		if (!Blueprint || !Graph)
+		{
+			return;
+		}
+
+		if (UAssetEditorSubsystem* const AssetEditorSubsystem = OpenBlueprintEditor(Blueprint))
+		{
+			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (IBlueprintEditor* const BlueprintEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
+				{
+					if (const TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
+					{
+						GraphEditor->JumpToNode(Node, false);
+					}
+				}
+			}
+		}
 	}
 };

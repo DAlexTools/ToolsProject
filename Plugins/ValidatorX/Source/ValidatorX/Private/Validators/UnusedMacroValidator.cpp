@@ -7,6 +7,7 @@
 #include "BlueprintEditor.h"
 #include "Misc/DataValidation.h"
 #include "SMyBlueprint.h"
+#include "Library/UtilsFunctionLibrary.h"
 
 UUnusedMacroValidator::UUnusedMacroValidator()
 {
@@ -78,31 +79,7 @@ EDataValidationResult UUnusedMacroValidator::ValidateLoadedAsset_Implementation(
 
 				TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 				Message->AddToken(FActionToken::Create(FText::FromString("Jump to macro"), FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
-						{
-							if(Blueprint && MacroGraph)
-							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-									if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-									{
-										if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-										{
-											BlueprintEditor->OpenGraphAndBringToFront(MacroGraph, true);
-											if(TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
-											{
-												MyBlueprintWidget->SelectItemByName(MacroGraph->GetFName(),
-													ESelectInfo::Direct,
-													INDEX_NONE,
-													false);
-											}
-										}
-									}
-								}
-							}
-						})
-				));
+					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphAndSelectItem, Blueprint, MacroGraph)));
 
 				const FText DeleteMacroText = FText::Format(
 					INVTEXT("'Fix' - Delete Macro - '{0}'"),
