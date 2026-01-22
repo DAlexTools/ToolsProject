@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Validators/UnusedMacroValidator.h"
 #include "K2Node_MacroInstance.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -29,12 +28,12 @@ EDataValidationResult UUnusedMacroValidator::ValidateLoadedAsset_Implementation(
 {
 	bIsError = false;
 
-	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if (UBlueprint* const Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		TArray<UEdGraph*> AllGraphs;
 		Blueprint->GetAllGraphs(AllGraphs);
 
-		for(UEdGraph* MacroGraph : Blueprint->MacroGraphs)
+		for (UEdGraph* const MacroGraph : Blueprint->MacroGraphs)
 		{
 			if (!MacroGraph)
 			{
@@ -42,18 +41,18 @@ EDataValidationResult UUnusedMacroValidator::ValidateLoadedAsset_Implementation(
 			}
 
 			const FName MacroName = MacroGraph->GetFName();
-			bool bIsMacroUsed = false;
+			bool		bIsMacroUsed = false;
 
-			for (UEdGraph* Graph : AllGraphs)
+			for (UEdGraph* const Graph : AllGraphs)
 			{
 				if (!Graph || Graph == MacroGraph)
 				{
 					continue;
 				}
 
-				for (UEdGraphNode* Node : Graph->Nodes)
+				for (UEdGraphNode* const Node : Graph->Nodes)
 				{
-					if (const UK2Node_MacroInstance* MacroInstance = Cast<UK2Node_MacroInstance>(Node))
+					if (const UK2Node_MacroInstance* const MacroInstance = Cast<UK2Node_MacroInstance>(Node))
 					{
 						if (MacroInstance->GetMacroGraph() == MacroGraph)
 						{
@@ -69,65 +68,57 @@ EDataValidationResult UUnusedMacroValidator::ValidateLoadedAsset_Implementation(
 				}
 			}
 
-
-			if(!bIsMacroUsed)
+			if (!bIsMacroUsed)
 			{
 				const FText MessageText = FText::Format(
 					INVTEXT("Macro '{0}' is never used."),
-					FText::FromName(MacroName)
-				);
-
-				TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
-				Message->AddToken(FActionToken::Create(FText::FromString("Jump to macro"), FText::GetEmpty(),
-					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphAndSelectItem, Blueprint, MacroGraph)));
-
-				const FText DeleteMacroText = FText::Format(
-					INVTEXT("'Fix' - Delete Macro - '{0}'"),
 					FText::FromName(MacroName));
 
+				TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
+				Message->AddToken(FActionToken::Create(FText::FromString("Jump to macro"), FText::GetEmpty(),		   //
+					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphAndSelectItem, Blueprint, MacroGraph))); //
+
+				const FText DeleteMacroText = FText::Format( //
+					INVTEXT("'Fix' - Delete Macro - '{0}'"), //
+					FText::FromName(MacroName));			 //
+
 				Message->AddToken(FActionToken::Create(DeleteMacroText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([=]
+					FSimpleDelegate::CreateLambda([Blueprint, MacroGraph, MacroName] 
 						{
-							if(Blueprint && MacroGraph)
+						if (Blueprint && MacroGraph)
+						{
+							if (UAssetEditorSubsystem* const AssetEditorSubsystem = FBlueprintHelper::OpenBlueprintEditor(Blueprint))
 							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
-									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
+								FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=](float DeltaTime) {
+									if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+									{
+										if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
 										{
-											if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+											const FText ConfirmText = FText::Format(
+												INVTEXT("Are you sure you want to delete the unused Macro '{0}' from Blueprint '{1}'?"),
+												FText::FromName(MacroName),
+												FText::FromString(Blueprint->GetName()));
+
+											if (FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
 											{
-												if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-												{
-													const FText ConfirmText = FText::Format(
-														INVTEXT("Are you sure you want to delete the unused Macro '{0}' from Blueprint '{1}'?"),
-														FText::FromName(MacroName),
-														FText::FromString(Blueprint->GetName())
-													);
+												Blueprint->Modify();
 
-													if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
-													{
-														Blueprint->Modify();
+												Blueprint->MacroGraphs.Remove(MacroGraph);
+												MacroGraph->Modify();
+												MacroGraph->MarkAsGarbage();
 
-														Blueprint->MacroGraphs.Remove(MacroGraph);
-														MacroGraph->Modify();
-														MacroGraph->MarkAsGarbage();
-
-														FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-													}
-												}
+												FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 											}
-											return false;
-										}));
-								}
+										}
+									}
+									return false;
+								}));
 							}
-						})));
-
+						}
+					})));
 
 				bIsError = true;
 			}
-
 		}
 	}
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;

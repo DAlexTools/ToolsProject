@@ -30,7 +30,7 @@ bool UUnusedNodeValidator::CanValidateAsset_Implementation(const FAssetData& InA
 
 bool UUnusedNodeValidator::IsEnabled() const
 {
-	static const UUnusedNodeValidator* CDO = GetDefault<UUnusedNodeValidator>();
+	static const UUnusedNodeValidator* const CDO = GetDefault<UUnusedNodeValidator>();
 	return CDO->bIsEnabled && !bIsConfigDisabled;
 }
 

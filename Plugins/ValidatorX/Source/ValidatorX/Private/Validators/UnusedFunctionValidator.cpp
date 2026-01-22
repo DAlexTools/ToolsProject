@@ -32,28 +32,37 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 {
 	bIsError = false;
 
-	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if(UBlueprint* const Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		TArray<UEdGraph*> AllGraphs;
 		Blueprint->GetAllGraphs(AllGraphs);
 
-		for(UEdGraph* FunctionGraph : Blueprint->FunctionGraphs)
+		for(UEdGraph* const FunctionGraph : Blueprint->FunctionGraphs)
 		{
-			if(!FunctionGraph) continue;
+			if (!FunctionGraph)
+			{
+				continue;
+			}
 
 			const FName FunctionName = FunctionGraph->GetFName();
-			if(FunctionName == UEdGraphSchema_K2::FN_UserConstructionScript) continue;
+			if (FunctionName == UEdGraphSchema_K2::FN_UserConstructionScript)
+			{
+				continue;
+			}
 
 			bool bIsFunctionUsed = false;
 
 			// 1. Search in this blueprint
-			for(UEdGraph* Graph : AllGraphs)
+			for(UEdGraph* const Graph : AllGraphs)
 			{
-				if(!Graph || Graph == FunctionGraph) continue;
-
-				for(UEdGraphNode* Node : Graph->Nodes)
+				if (!Graph || Graph == FunctionGraph)
 				{
-					if(const UK2Node_CallFunction* CallFunctionNode = Cast<UK2Node_CallFunction>(Node))
+					continue;
+				}
+
+				for(const UEdGraphNode* const Node : Graph->Nodes)
+				{
+					if(const UK2Node_CallFunction* const CallFunctionNode = Cast<UK2Node_CallFunction>(Node))
 					{
 						if(CallFunctionNode->FunctionReference.GetMemberName() == FunctionName)
 						{
@@ -62,7 +71,10 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 						}
 					}
 				}
-				if(bIsFunctionUsed) break;
+				if (bIsFunctionUsed)
+				{
+					break;
+				}
 			}
 
 			// 2. Search in child blueprints 
@@ -71,19 +83,21 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 				TArray<UClass*> DerivedClasses;
 				UBPUtilsNodeFunctionLibrary::GetAllDerivedBlueprintClasses(Blueprint->GeneratedClass, DerivedClasses, true);
 
-				for(UClass* ChildClass : DerivedClasses)
+				for(const UClass* const ChildClass : DerivedClasses)
 				{
-					UBlueprint* ChildBP = Cast<UBlueprint>(ChildClass->ClassGeneratedBy);
-					if(!ChildBP) continue;
-
+					const UBlueprint* const ChildBP = Cast<UBlueprint>(ChildClass->ClassGeneratedBy);
+					if (!ChildBP)
+					{
+						continue;
+					}
 					TArray<UEdGraph*> ChildGraphs;
 					ChildBP->GetAllGraphs(ChildGraphs);
 
-					for(UEdGraph* Graph : ChildGraphs)
+					for(const UEdGraph* Graph : ChildGraphs)
 					{
-						for(UEdGraphNode* Node : Graph->Nodes)
+						for(const UEdGraphNode* const Node : Graph->Nodes)
 						{
-							if(const UK2Node_CallFunction* CallFunctionNode = Cast<UK2Node_CallFunction>(Node))
+							if(const UK2Node_CallFunction* const CallFunctionNode = Cast<UK2Node_CallFunction>(Node))
 							{
 								if(CallFunctionNode->FunctionReference.GetMemberName() == FunctionName)
 								{
@@ -92,9 +106,15 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 								}
 							}
 						}
-						if(bIsFunctionUsed) break;
+						if (bIsFunctionUsed)
+						{
+							break;
+						}
 					}
-					if(bIsFunctionUsed) break;
+					if (bIsFunctionUsed)
+					{
+						break;
+					}
 				}
 			}
 
@@ -124,15 +144,13 @@ EDataValidationResult UUnusedFunctionValidator::ValidateLoadedAsset_Implementati
 						{
 							if(Blueprint && FunctionGraph)
 							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
+								if(UAssetEditorSubsystem* const AssetEditorSubsystem = FBlueprintHelper::OpenBlueprintEditor(Blueprint))
 								{
-									AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
 									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Blueprint, FunctionGraph, AssetEditorSubsystem, FunctionName] (float DeltaTime)
 										{
-											if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+											if(IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
 											{
-												if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+												if(FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
 												{
 													const FText ConfirmText = FText::Format(
 														INVTEXT("Are you sure you want to delete the unused Function '{0}' from Blueprint '{1}'?"),

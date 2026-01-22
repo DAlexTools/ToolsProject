@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Validators/UnboundEventDispatcherValidator.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "K2Node_AddDelegate.h"
@@ -18,6 +17,7 @@
 #include "BlueprintEditorModule.h"
 #include "BlueprintEditor.h"
 #include "SMyBlueprint.h"
+#include "Library/UtilsFunctionLibrary.h"
 
 UUnboundEventDispatcherValidator::UUnboundEventDispatcherValidator()
 {
@@ -39,147 +39,122 @@ EDataValidationResult UUnboundEventDispatcherValidator::ValidateLoadedAsset_Impl
 {
 	bIsError = false;
 
-	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if (UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		TSet<FName> AllDispatchers;
 
-		for(const FBPVariableDescription& Variable : Blueprint->NewVariables)
+		for (const FBPVariableDescription& Variable : Blueprint->NewVariables)
 		{
-			if(Variable.VarType.PinCategory == UEdGraphSchema_K2::PC_MCDelegate || Variable.VarType.PinCategory == UEdGraphSchema_K2::PC_Delegate)
+			if (Variable.VarType.PinCategory == UEdGraphSchema_K2::PC_MCDelegate || Variable.VarType.PinCategory == UEdGraphSchema_K2::PC_Delegate)
 			{
 				AllDispatchers.Add(Variable.VarName);
 			}
 		}
 
-		if(AllDispatchers.Num() == 0)
+		if (AllDispatchers.Num() == 0)
 		{
 			return EDataValidationResult::Valid;
 		}
 
 		TSet<FName> UsedDispatchers;
 
-
-		auto GatherUsed = [&UsedDispatchers] (const UEdGraph* Graph)
+		auto GatherUsed = [&UsedDispatchers](const UEdGraph* Graph) {
+			for (UEdGraphNode* Node : Graph->Nodes)
 			{
-				for(UEdGraphNode* Node : Graph->Nodes)
+				if (UK2Node* K2Node = Cast<UK2Node>(Node))
 				{
-					if(UK2Node* K2Node = Cast<UK2Node>(Node))
+					if (UK2Node_AddDelegate* Add = Cast<UK2Node_AddDelegate>(K2Node))
 					{
-						if(UK2Node_AddDelegate* Add = Cast<UK2Node_AddDelegate>(K2Node))
-						{
-							UsedDispatchers.Add(Add->GetPropertyName());
-						}
-						else if(UK2Node_RemoveDelegate* Remove = Cast<UK2Node_RemoveDelegate>(K2Node))
-						{
-							UsedDispatchers.Add(Remove->GetPropertyName());
-						}
-						else if(UK2Node_CallDelegate* Call = Cast<UK2Node_CallDelegate>(K2Node))
-						{
-							UsedDispatchers.Add(Call->GetPropertyName());
-						}
-						else if(UK2Node_AssignDelegate* Assign = Cast<UK2Node_AssignDelegate>(K2Node))
-						{
-							UsedDispatchers.Add(Assign->GetPropertyName());
-						}
+						UsedDispatchers.Add(Add->GetPropertyName());
+					}
+					else if (UK2Node_RemoveDelegate* Remove = Cast<UK2Node_RemoveDelegate>(K2Node))
+					{
+						UsedDispatchers.Add(Remove->GetPropertyName());
+					}
+					else if (UK2Node_CallDelegate* Call = Cast<UK2Node_CallDelegate>(K2Node))
+					{
+						UsedDispatchers.Add(Call->GetPropertyName());
+					}
+					else if (UK2Node_AssignDelegate* Assign = Cast<UK2Node_AssignDelegate>(K2Node))
+					{
+						UsedDispatchers.Add(Assign->GetPropertyName());
 					}
 				}
-			};
+			}
+		};
 
 		TArray<UEdGraph*> AllGraphs;
 		Blueprint->GetAllGraphs(AllGraphs);
 
-		for(UEdGraph* Graph : AllGraphs)
+		for (UEdGraph* Graph : AllGraphs)
 		{
 			GatherUsed(Graph);
 		}
 
-		for(const FName& Dispatcher : AllDispatchers)
+		for (const FName& Dispatcher : AllDispatchers)
 		{
-			if(!UsedDispatchers.Contains(Dispatcher))
+			if (!UsedDispatchers.Contains(Dispatcher))
 			{
-				const FText MessageText = FText::Format(
-					INVTEXT("Event Dispatcher '{0}' is never bound, assigned or called in Blueprint '{1}'."),
-					FText::FromName(Dispatcher),
-					FText::FromString(Blueprint->GetName())
-				);
+				const FText MessageText = FText::Format(													  //
+					INVTEXT("Event Dispatcher '{0}' is never bound, assigned or called in Blueprint '{1}'."), //
+					FText::FromName(Dispatcher),															  //
+					FText::FromString(Blueprint->GetName()));												  //
 
 				TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
-				FText JumpToDispatcherText = FText::Format(INVTEXT("Jump to Dispatcher - '{0}'    "), FText::FromName(Dispatcher));
-				Message->AddToken(FActionToken::Create(JumpToDispatcherText, FText::FromString(""),
-					FSimpleDelegate::CreateLambda([Blueprint, Dispatcher]
-						{
-							if(Blueprint)
-							{
-								UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-								AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-								if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-								{
-									if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-									{
-										if(TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
-										{
-											MyBlueprintWidget->SelectItemByName(Dispatcher,
-												ESelectInfo::Direct,
-												INDEX_NONE,
-												false);
-										}
-									}
-								}
-							}
-						})
-				));
+				FText						  JumpToDispatcherText = FText::Format(INVTEXT("Jump to Dispatcher - '{0}'    "), FText::FromName(Dispatcher));
+
+				Message->AddToken(FActionToken::Create(JumpToDispatcherText, FText::FromString(""),								 //
+					FSimpleDelegate::CreateLambda(&FBlueprintHelper::OpenBlueprintAndSelectItemByName, Blueprint, Dispatcher))); //
 
 				FText DeleteDispatcherText = FText::Format(INVTEXT("'Fix' - Delete Dispatcher - '{0}'"), FText::FromName(Dispatcher));
+
 				Message->AddToken(FActionToken::Create(DeleteDispatcherText, FText::FromString(""),
-					FSimpleDelegate::CreateLambda([Blueprint, Dispatcher]
+					FSimpleDelegate::CreateLambda([Blueprint, Dispatcher] {
+						if (Blueprint)
 						{
-							if(Blueprint)
+							if (UAssetEditorSubsystem* AssetEditorSubsystem = FBlueprintHelper::OpenBlueprintEditor(Blueprint))
 							{
-								UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-								AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-								FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
+								FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([Blueprint, AssetEditorSubsystem, Dispatcher](float DeltaTime) {
+									if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, /*bFocusIfOpen=*/false))
 									{
-										if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, /*bFocusIfOpen=*/false))
+										if (FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
 										{
-											if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+											if (BlueprintEditor->GetMyBlueprintWidget().IsValid())
 											{
-												if(BlueprintEditor->GetMyBlueprintWidget().IsValid())
+												int32 IndexToRemove = INDEX_NONE;
+												for (int32 i = 0; i < Blueprint->NewVariables.Num(); ++i)
 												{
-													int32 IndexToRemove = INDEX_NONE;
-													for(int32 i = 0; i < Blueprint->NewVariables.Num(); ++i)
+													if (Blueprint->NewVariables[i].VarName == Dispatcher)
 													{
-														if(Blueprint->NewVariables[i].VarName == Dispatcher)
-														{
-															IndexToRemove = i;
-															break;
-														}
+														IndexToRemove = i;
+														break;
 													}
-
-													if(IndexToRemove != INDEX_NONE)
-													{
-														const FText ConfirmText = FText::Format(
-															INVTEXT("Are you sure you want to delete the dispatcher '{0}' from Blueprint '{1}'?"),
-															FText::FromName(Dispatcher),
-															FText::FromString(Blueprint->GetName())
-														);
-
-														if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
-														{
-															Blueprint->Modify();
-															Blueprint->NewVariables.RemoveAt(IndexToRemove);
-															FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-														}
-													}
-
-													return false;
 												}
+
+												if (IndexToRemove != INDEX_NONE)
+												{
+													const FText ConfirmText = FText::Format(
+														INVTEXT("Are you sure you want to delete the dispatcher '{0}' from Blueprint '{1}'?"),
+														FText::FromName(Dispatcher),
+														FText::FromString(Blueprint->GetName()));
+
+													if (FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
+													{
+														Blueprint->Modify();
+														Blueprint->NewVariables.RemoveAt(IndexToRemove);
+														FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
+													}
+												}
+
+												return false;
 											}
 										}
-										return true;
-									}));
+									}
+									return true;
+								}));
 							}
-						})
-				));
+						}
+					})));
 				bIsError = true;
 			}
 		}

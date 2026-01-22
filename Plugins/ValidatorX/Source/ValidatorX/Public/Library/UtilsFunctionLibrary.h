@@ -52,17 +52,20 @@ public:
 		{
 			return;
 		}
-
-		if (UAssetEditorSubsystem* const AssetEditorSubsystem = OpenBlueprintEditor(Blueprint))
+		UAssetEditorSubsystem* const AssetEditorSubsystem = OpenBlueprintEditor(Blueprint);
+		IAssetEditorInstance* const	 EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false);
+		
+		if (!EditorInstance)
 		{
-			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-			{
-				if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-				{
-					BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
-				}
-			}
+			return;
 		}
+		
+		if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+		{
+			BlueprintEditor->OpenGraphAndBringToFront(Graph, true);
+		}
+		
+		
 	}
 
 	FORCEINLINE static void OpenGraphAndSelectItem(UBlueprint* Blueprint, UEdGraph* Graph)
@@ -74,7 +77,6 @@ public:
 
 		if (UAssetEditorSubsystem* const AssetEditorSubsystem = OpenBlueprintEditor(Blueprint))
 		{
-			AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
 			if (IAssetEditorInstance* const EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
 			{
 				if (FBlueprintEditor* const BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
@@ -83,6 +85,31 @@ public:
 					if (const TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
 					{
 						MyBlueprintWidget->SelectItemByName(Graph->GetFName(),
+							ESelectInfo::Direct,
+							INDEX_NONE,
+							false);
+					}
+				}
+			}
+		}
+	}
+
+	FORCEINLINE static void OpenBlueprintAndSelectItemByName(UBlueprint* Blueprint, FName GraphName)
+	{
+		if (!Blueprint)
+		{
+			return;
+		}
+
+		if (UAssetEditorSubsystem* AssetEditorSubsystem = OpenBlueprintEditor(Blueprint))
+		{
+			if (IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+			{
+				if (FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+				{
+					if (TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
+					{
+						MyBlueprintWidget->SelectItemByName(GraphName,
 							ESelectInfo::Direct,
 							INDEX_NONE,
 							false);
