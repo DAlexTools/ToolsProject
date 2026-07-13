@@ -5,6 +5,8 @@
 
 #include "Logging/DataAssetManagerLog.h"
 
+DEFINE_LOG_CATEGORY(SDataAssetManagerLog);
+
 TAutoConsoleVariable<bool> CVarDebugDataAssetManager(
 	TEXT("ShowDebugDataAssetManager"),
 	false,

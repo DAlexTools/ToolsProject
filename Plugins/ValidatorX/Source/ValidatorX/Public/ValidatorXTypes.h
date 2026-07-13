@@ -8,5 +8,6 @@ namespace ValidatorListColumns
 {
 	static const FName ColumnID_Type("Type");
 	static const FName ColumnID_Name("Name");
-	static const FName ColumnID_Button("Button");
+	static const FName ColumnID_State("State");
+	static const FName ColumnID_Enabled("Enabled");
 } // namespace ValidatorListColumns

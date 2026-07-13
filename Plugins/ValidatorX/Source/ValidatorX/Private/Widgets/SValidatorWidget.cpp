@@ -3,7 +3,9 @@
 #include "Widgets/SValidatorWidget.h"
 
 #include "BaseClasses/ValidatorXBase.h"
+#include "ValidatorXTypes.h"
 #include "ValidatorXManager.h"
+#include "Widgets/SValidatorTableRow.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/SNullWidget.h"
@@ -15,14 +17,6 @@
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/SHeaderRow.h"
 #include "Widgets/Views/SListView.h"
-
-namespace ValidatorListColumns
-{
-	static const FName ColumnID_Type("Type");
-	static const FName ColumnID_Name("Name");
-	static const FName ColumnID_State("State");
-	static const FName ColumnID_Enabled("Enabled");
-}
 
 namespace ValidatorWidgetUtils
 {
@@ -86,111 +80,6 @@ namespace ValidatorWidgetUtils
 			|| Validator->GetTypeValidator().Contains(Search, ESearchCase::IgnoreCase);
 	}
 }
-
-class SValidatorTableRow : public SMultiColumnTableRow<TWeakObjectPtr<UValidatorXBase>>
-{
-public:
-	SLATE_BEGIN_ARGS(SValidatorTableRow) {}
-		SLATE_ARGUMENT(TWeakObjectPtr<UValidatorXBase>, Validator)
-		SLATE_ARGUMENT(FSlateFontInfo, Font)
-		SLATE_EVENT(FSimpleDelegate, OnValidatorChanged)
-	SLATE_END_ARGS()
-
-	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTable)
-	{
-		Validator = InArgs._Validator;
-		LocalFont = InArgs._Font;
-		OnValidatorChanged = InArgs._OnValidatorChanged;
-
-		SMultiColumnTableRow::Construct(
-			FSuperRowType::FArguments()
-			.Style(FAppStyle::Get(), "ContentBrowser.AssetListView.ColumnListTableRow"),
-			InOwnerTable);
-	}
-
-	virtual TSharedRef<SWidget> GenerateWidgetForColumn(const FName& ColumnId) override
-	{
-		if(ColumnId == ValidatorListColumns::ColumnID_Type)
-		{
-			return MakeTextCell(Validator.IsValid() ? Validator->GetTypeValidator() : FString(), ETextJustify::Center);
-		}
-
-		if(ColumnId == ValidatorListColumns::ColumnID_Name)
-		{
-			return MakeTextCell(ValidatorWidgetUtils::GetValidatorDisplayName(Validator.Get()), ETextJustify::Left);
-		}
-
-		if(ColumnId == ValidatorListColumns::ColumnID_State)
-		{
-			return MakeStateCell();
-		}
-
-		if(ColumnId == ValidatorListColumns::ColumnID_Enabled)
-		{
-			return SNew(SBox)
-				.Padding(4.0f)
-				.VAlign(VAlign_Center)
-				.HAlign(HAlign_Center)
-				[
-					SNew(SCheckBox)
-						.IsChecked_Lambda([this]
-							{
-								return Validator.IsValid() && Validator->IsEnabled()
-									? ECheckBoxState::Checked
-									: ECheckBoxState::Unchecked;
-							})
-						.OnCheckStateChanged_Lambda([this](ECheckBoxState NewState)
-							{
-								if(Validator.IsValid())
-								{
-									Validator->SetValidationEnabled(NewState == ECheckBoxState::Checked);
-									Invalidate(EInvalidateWidgetReason::Paint);
-									OnValidatorChanged.ExecuteIfBound();
-								}
-							})
-				];
-		}
-
-		return SNullWidget::NullWidget;
-	}
-
-private:
-	TSharedRef<SWidget> MakeTextCell(const FString& Text, ETextJustify::Type Justification) const
-	{
-		return SNew(SBox)
-			.Padding(6.0f, 4.0f)
-			.VAlign(VAlign_Center)
-			.HAlign(Justification == ETextJustify::Left ? HAlign_Left : HAlign_Center)
-			[
-				SNew(STextBlock)
-					.Text(FText::FromString(Text))
-					.Font(LocalFont)
-					.Justification(Justification)
-			];
-	}
-
-	TSharedRef<SWidget> MakeStateCell() const
-	{
-		return SNew(SBox)
-			.Padding(6.0f, 4.0f)
-			.VAlign(VAlign_Center)
-			.HAlign(HAlign_Center)
-			[
-				SNew(STextBlock)
-					.Text_Lambda([this]
-						{
-							const bool bEnabled = Validator.IsValid() && Validator->IsEnabled();
-							return bEnabled ? FText::FromString(TEXT("Enabled")) : FText::FromString(TEXT("Disabled"));
-						})
-					.Font(LocalFont)
-					.Justification(ETextJustify::Center)
-			];
-	}
-
-	TWeakObjectPtr<UValidatorXBase> Validator;
-	FSlateFontInfo LocalFont;
-	FSimpleDelegate OnValidatorChanged;
-};
 
 void SValidatorWidget::Construct(const FArguments& InArgs)
 {

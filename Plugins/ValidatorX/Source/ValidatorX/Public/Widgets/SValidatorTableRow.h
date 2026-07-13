@@ -3,10 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Widgets/SCompoundWidget.h"
-#include "BaseClasses/BlueprintValidatorBase.h"
-#include "Widgets/SValidatorWidget.h"
-#include "Styling/SlateStyleRegistry.h"
+#include "BaseClasses/ValidatorXBase.h"
+#include "Widgets/Layout/SBox.h"
+#include "Widgets/Views/STableRow.h"
 
 /**
  * @brief Represents a single row in the validator list table.
@@ -14,15 +13,18 @@
  * Each row displays a validator's type, name, and an enable/disable button.
  * Inherits from SMultiColumnTableRow to support multiple columns.
  */
-class VALIDATORX_API SValidatorTableRow : public SMultiColumnTableRow<TWeakObjectPtr<UBlueprintValidatorBase>>
+class VALIDATORX_API SValidatorTableRow : public SMultiColumnTableRow<TWeakObjectPtr<UValidatorXBase>>
 {
 public:
 	SLATE_BEGIN_ARGS(SValidatorTableRow) {}
 	/** The validator object associated with this row. */
-	SLATE_ARGUMENT(TWeakObjectPtr<UBlueprintValidatorBase>, Validator)
+	SLATE_ARGUMENT(TWeakObjectPtr<UValidatorXBase>, Validator)
 
 	/** The font to use for text in this row. */
 	SLATE_ARGUMENT(FSlateFontInfo, Font)
+
+	/** Called after the row changes the validator enabled state. */
+	SLATE_EVENT(FSimpleDelegate, OnValidatorChanged)
 	SLATE_END_ARGS()
 
 	/**
@@ -92,6 +94,15 @@ private:
 	void GetButtonCheckBoxStateChange(ECheckBoxState NewState);
 
 	/**
+	 * @brief Creates a text cell with a consistent alignment and padding.
+	 *
+	 * @param Text Text rendered in the cell.
+	 * @param Justification Horizontal text justification.
+	 * @return A shared reference to the generated cell widget.
+	 */
+	[[nodiscard]] TSharedRef<SBox> MakeTextCell(const FString& Text, ETextJustify::Type Justification) const;
+
+	/**
 	 * @brief Creates the widget for the "Type" column.
 	 *
 	 * @return A shared reference to the widget displaying the validator type.
@@ -106,7 +117,14 @@ private:
 	[[nodiscard]] TSharedRef<SBox> GetNameBox();
 
 	/**
-	 * @brief Creates the widget for the "Button" column.
+	 * @brief Creates the widget for the "State" column.
+	 *
+	 * @return A shared reference to the widget displaying the validator enabled state.
+	 */
+	[[nodiscard]] TSharedRef<SBox> GetStateBox();
+
+	/**
+	 * @brief Creates the widget for the "Enabled" column.
 	 *
 	 * @return A shared reference to the widget containing the enable/disable checkbox.
 	 */
@@ -124,7 +142,10 @@ private:
 	FSlateFontInfo LocalFont;
 
 	/** The validator object associated with this row. */
-	TWeakObjectPtr<UBlueprintValidatorBase> Validator;
+	TWeakObjectPtr<UValidatorXBase> Validator;
+
+	/** Called after the validator state changes through this row. */
+	FSimpleDelegate OnValidatorChanged;
 
 	/**
 	 * @brief Helper function to wrap a widget in a centered SBox with padding.

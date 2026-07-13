@@ -3,7 +3,25 @@
 
 #include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 
-DEFINE_LOG_CATEGORY_STATIC(SDataAssetManagerLog, All, All)
+#include "AssetManagerEditorModule.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "AssetToolsModule.h"
+#include "ContentBrowserModule.h"
+#include "DataAssetManagerTypes.h"
+#include "DeveloperSettings/DataAssetManagerSettings.h"
+#include "Dom/JsonObject.h"
+#include "Engine/DataAsset.h"
+#include "Engine/Engine.h"
+#include "IDetailRootObjectCustomization.h"
+#include "JsonObjectConverter.h"
+#include "Logging/DataAssetManagerLog.h"
+#include "Misc/FileHelper.h"
+#include "Misc/PackageName.h"
+#include "ObjectTools.h"
+#include "ScopedTransaction.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+#include "IContentBrowserSingleton.h"
 
 FString DataAssetManager::GetAssetDiskSize(const FAssetData& AssetData)
 {
@@ -45,7 +63,7 @@ const UDataAssetManagerSettings* DataAssetManager::GetPluginSettings()
 	return Settings;
 }
 
-bool DataAssetManager::DeleteMultiplyAsset(const TArray<FAssetData>& Assets)
+bool DataAssetManager::DeleteMultiplyAsset(const TArray<FAssetData>& Assets, bool bShowConfirmation)
 {
 	if (Assets.Num() == 0)
 	{
@@ -53,7 +71,7 @@ bool DataAssetManager::DeleteMultiplyAsset(const TArray<FAssetData>& Assets)
 		return false;
 	}
 
-	int32 DeletedCount = ObjectTools::DeleteAssets(Assets);
+	int32 DeletedCount = ObjectTools::DeleteAssets(Assets, bShowConfirmation);
 	UE_LOG(SDataAssetManagerLog, Log, TEXT("%s Deleted %d assets"), ANSI_TO_TCHAR(__FUNCTION__), DeletedCount);
 
 	return DeletedCount > 0;
@@ -136,6 +154,60 @@ void DataAssetManager::ProcessAssetData(const TArray<FAssetData>& RefAssetData, 
 	/** Converts asset data to identifiers for reference viewer / size map / audit tools */
 	IAssetManagerEditorModule::ExtractAssetIdentifiersFromAssetDataList(RefAssetData, AssetIdentifiers);
 	ProcessFunction(AssetIdentifiers);
+}
+
+FString DataAssetManager::BuildClipboardEntry(const FAssetData& Item, bool bCopyPaths)
+{
+	if (!Item.IsValid())
+	{
+		return FString();
+	}
+
+	if (!bCopyPaths)
+	{
+		return Item.GetExportTextName();
+	}
+
+	FString PackageFileName;
+	if (FPackageName::DoesPackageExist(Item.PackageName.ToString(), &PackageFileName))
+	{
+		return FPaths::ConvertRelativePathToFull(PackageFileName);
+	}
+
+	return FPaths::ConvertRelativePathToFull(
+		FPackageName::LongPackageNameToFilename(Item.PackageName.ToString(), FPackageName::GetAssetPackageExtension()));
+}
+
+void DataAssetManager::ResetToCDO(const FDetailsObjectSet& InRootObjectSet)
+{
+	FScopedTransaction Transaction(NSLOCTEXT("DataAssetManager", "ResetToCDO", "Reset Data Asset To Default"));
+	bool bResetAnyObject = false;
+
+	for (const UObject* RootObject : InRootObjectSet.RootObjects)
+	{
+		if (!IsValid(RootObject) || !RootObject->GetClass() || RootObject->HasAnyFlags(RF_ClassDefaultObject))
+		{
+			continue;
+		}
+
+		UObject* MutableObject = const_cast<UObject*>(RootObject);
+		UObject* DefaultObject = MutableObject->GetClass()->GetDefaultObject();
+		if (!IsValid(DefaultObject))
+		{
+			continue;
+		}
+
+		MutableObject->Modify();
+		UEngine::CopyPropertiesForUnrelatedObjects(DefaultObject, MutableObject);
+		MutableObject->PostEditChange();
+		MutableObject->MarkPackageDirty();
+		bResetAnyObject = true;
+	}
+
+	if (!bResetAnyObject)
+	{
+		Transaction.Cancel();
+	}
 }
 
 FString DataAssetManager::PathNormalize(const FString& InPath)

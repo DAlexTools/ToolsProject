@@ -3,11 +3,16 @@
 #include "Widgets/SValidatorTableRow.h"
 #include "Library/UtilsFunctionLibrary.h"
 #include "ValidatorXTypes.h"
+#include "Styling/AppStyle.h"
+#include "Widgets/Input/SCheckBox.h"
+#include "Widgets/SNullWidget.h"
+#include "Widgets/Text/STextBlock.h"
 
 void SValidatorTableRow::Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InOwnerTable)
 {
 	Validator = InArgs._Validator;
 	LocalFont = InArgs._Font;
+	OnValidatorChanged = InArgs._OnValidatorChanged;
 
 	SMultiColumnTableRow::Construct(
 		FSuperRowType::FArguments()														 //
@@ -25,7 +30,11 @@ TSharedRef<SWidget> SValidatorTableRow::GenerateWidgetForColumn(const FName& Col
 	{
 		return GetNameBox();
 	}
-	else if (ColumnId == ValidatorListColumns::ColumnID_Button)
+	else if (ColumnId == ValidatorListColumns::ColumnID_State)
+	{
+		return GetStateBox();
+	}
+	else if (ColumnId == ValidatorListColumns::ColumnID_Enabled)
 	{
 		return GetButtonBox();
 	}
@@ -55,22 +64,16 @@ FReply SValidatorTableRow::OnKeyDown(const FGeometry& MyGeometry, const FKeyEven
 
 TSharedRef<SBox> SValidatorTableRow::GetTypeBox()
 {
-	FString Type;
-	if (Validator.IsValid())
-	{
-		Type = Validator->GetTypeValidator();
-	}
-
-	TSharedRef<SBox> TypeBox = WrapBox(SNew(STextBlock)
-			.Text(FText::FromString(Type))
-			.Font(LocalFont)
-			.Justification(ETextJustify::Center));
-
-	return TypeBox;
+	return MakeTextCell(Validator.IsValid() ? Validator->GetTypeValidator() : FString(), ETextJustify::Center);
 }
 
 TSharedRef<SBox> SValidatorTableRow::GetNameBox()
 {
+	if (!Validator.IsValid())
+	{
+		return MakeTextCell(FString(), ETextJustify::Left);
+	}
+
 	FString CleanName = Validator->GetName();
 	int32	UnderscoreIndex;
 	if (CleanName.FindLastChar('_', UnderscoreIndex))
@@ -82,20 +85,25 @@ TSharedRef<SBox> SValidatorTableRow::GetNameBox()
 		}
 	}
 
+	if (CleanName.StartsWith(TEXT("Default__")))
+	{
+		CleanName.RightChopInline(9);
+	}
+
 	CleanName = FUtilsFunctionLibrary::AddSpacesBeforeUppercase(CleanName);
 
-	TSharedRef<SBox> NameBox = WrapBox(SNew(STextBlock)
-			.Text(FText::FromString(CleanName))
-			.Font(LocalFont)
-			.Justification(ETextJustify::Center));
+	return MakeTextCell(CleanName, ETextJustify::Left);
+}
 
-	return NameBox;
+TSharedRef<SBox> SValidatorTableRow::GetStateBox()
+{
+	const bool bEnabled = Validator.IsValid() && Validator->IsEnabled();
+	return MakeTextCell(bEnabled ? TEXT("Enabled") : TEXT("Disabled"), ETextJustify::Center);
 }
 
 TSharedRef<SBox> SValidatorTableRow::GetButtonBox()
 {
 	TSharedRef<SBox> ButtonBox = WrapBox(SNew(SCheckBox)
-			.Style(&FSlateStyleRegistry::FindSlateStyle("TakeRecorderStyle")->GetWidgetStyle<FCheckBoxStyle>("TakeRecorder.Source.Switch"))
 			.IsChecked(SharedThis(this), &SValidatorTableRow::GetBoxButtonState)
 			.OnCheckStateChanged(SharedThis(this), &SValidatorTableRow::GetButtonCheckBoxStateChange));
 
@@ -127,5 +135,21 @@ void SValidatorTableRow::GetButtonCheckBoxStateChange(ECheckBoxState NewState)
 			default:
 				break;
 		}
+		Invalidate(EInvalidateWidgetReason::Paint);
+		OnValidatorChanged.ExecuteIfBound();
 	}
+}
+
+TSharedRef<SBox> SValidatorTableRow::MakeTextCell(const FString& Text, ETextJustify::Type Justification) const
+{
+	return SNew(SBox)
+		.Padding(6.0f, 4.0f)
+		.VAlign(VAlign_Center)
+		.HAlign(Justification == ETextJustify::Left ? HAlign_Left : HAlign_Center)
+		[
+			SNew(STextBlock)
+				.Text(FText::FromString(Text))
+				.Font(LocalFont)
+				.Justification(Justification)
+		];
 }

@@ -44,7 +44,9 @@ public class ValidatorX : ModuleRules
 				"LevelEditor",
 				"InputCore",
 				"ToolMenus",
-				"AssetRegistry"
+				"AssetRegistry",
+				"DeveloperSettings"
+				
 			}
 			);
 		
