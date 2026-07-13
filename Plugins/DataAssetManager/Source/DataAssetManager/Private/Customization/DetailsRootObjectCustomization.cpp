@@ -6,7 +6,7 @@
 #include "DetailLayoutBuilder.h"
 #include "DesktopPlatformModule.h"
 #include "Editor.h"
-#include "FunctionLibraries/DataAssetManagerFunctionLibrary.h"
+#include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 #include "Framework/Application/SlateApplication.h"
 #include "JsonObjectConverter.h"
 #include "HAL/PlatformApplicationMisc.h"

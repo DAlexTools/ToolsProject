@@ -14,6 +14,9 @@ class UDataAssetManagerSettings;
  */
 namespace DataAssetManager
 {
+
+
+
 	/**
 	 * @brief Returns the formatted disk size for an asset package.
 	 * @param AssetData Asset data whose package file should be inspected.

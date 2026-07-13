@@ -37,7 +37,7 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "WidgetDrawerConfig.h"
 #include "Editor/ContentBrowser/Private/ContentBrowserSingleton.h"
-#include "FunctionLibraries/DataAssetManagerFunctionLibrary.h"
+#include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "UI/SFolderTreeWidget.h"
 #include "Logging/DataAssetManagerLog.h"

@@ -1,5 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 
@@ -11,17 +10,20 @@
 #include "DeveloperSettings/DataAssetManagerSettings.h"
 #include "Dom/JsonObject.h"
 #include "Engine/DataAsset.h"
-#include "Engine/Engine.h"
+#include "IAssetTools.h"
+#include "IContentBrowserSingleton.h"
 #include "IDetailRootObjectCustomization.h"
 #include "JsonObjectConverter.h"
 #include "Logging/DataAssetManagerLog.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "Modules/ModuleManager.h"
 #include "ObjectTools.h"
 #include "ScopedTransaction.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
-#include "IContentBrowserSingleton.h"
+#include "UObject/UnrealType.h"
+#include "Utils/DataAssetManagerPathUtils.h"
 
 namespace
 {
@@ -41,19 +43,6 @@ namespace
 		return !Property->HasAnyPropertyFlags(IgnoredFlags);
 	}
 
-	bool ArePropertyValuesIdentical(const FProperty* Property, const UObject* LeftObject, const UObject* RightObject)
-	{
-		for (int32 Index = 0; Index < Property->ArrayDim; ++Index)
-		{
-			if (!Property->Identical_InContainer(LeftObject, RightObject, Index))
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
-
 	bool ResetEditablePropertiesToCDO(UObject* MutableObject, const UObject* DefaultObject)
 	{
 		bool bChanged = false;
@@ -61,7 +50,7 @@ namespace
 		for (TFieldIterator<FProperty> PropertyIterator(MutableObject->GetClass(), EFieldIteratorFlags::IncludeSuper); PropertyIterator; ++PropertyIterator)
 		{
 			const FProperty* Property = *PropertyIterator;
-			if (!ShouldResetPropertyToDefault(Property) || ArePropertyValuesIdentical(Property, MutableObject, DefaultObject))
+			if (!ShouldResetPropertyToDefault(Property) || DataAssetManager::ArePropertyValuesIdentical(Property, MutableObject, DefaultObject))
 			{
 				continue;
 			}
@@ -79,44 +68,47 @@ namespace
 	}
 }
 
+bool DataAssetManager::ArePropertyValuesIdentical(const FProperty* Property, const UObject* LeftObject, const UObject* RightObject)
+{
+	if (!Property || !LeftObject || !RightObject)
+	{
+		return true;
+	}
+
+	for (int32 Index = 0; Index < Property->ArrayDim; ++Index)
+	{
+		if (!Property->Identical_InContainer(LeftObject, RightObject, Index))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 FString DataAssetManager::GetAssetDiskSize(const FAssetData& AssetData)
 {
-	TTuple<double, double, FString, FString> SizeAndText(0.0, 0.0, TEXT("Unknown"), TEXT("Unknown"));
-	auto& SizeInKb = SizeAndText.Get<0>();
-	auto& SizeInMb = SizeAndText.Get<1>();
-	auto& TextKb = SizeAndText.Get<2>();
-	auto& TextMb = SizeAndText.Get<3>();
 	constexpr double ConversionFactor = 1024.0;
 
 	FString PackageFileName;
-	if (FPackageName::DoesPackageExist(AssetData.PackageName.ToString(), &PackageFileName))
+	if (!FPackageName::DoesPackageExist(AssetData.PackageName.ToString(), &PackageFileName))
 	{
-		const auto FileSize = IFileManager::Get().FileSize(*PackageFileName);
-		if (FileSize == INDEX_NONE)
-		{
-			return TEXT("Unknown");
-		}
-
-		SizeInKb = static_cast<double>(FileSize) / ConversionFactor;
-		TextKb = FString::Printf(TEXT("%.1f Kb"), SizeInKb);
-
-		if (SizeInKb >= ConversionFactor)
-		{
-			SizeInMb = SizeInKb / ConversionFactor;
-			TextMb = FString::Printf(TEXT("%.1f Mb"), SizeInMb);
-			return TextMb;
-		}
-
-		return TextKb;
+		return DataAssetManager::UnknownStr;
 	}
 
-	return TEXT("Unknown");
-}
+	const int64 FileSize = IFileManager::Get().FileSize(*PackageFileName);
+	if (FileSize == INDEX_NONE)
+	{
+		return DataAssetManager::UnknownStr;
+	}
 
-const UDataAssetManagerSettings* DataAssetManager::GetPluginSettings()
-{
-	const UDataAssetManagerSettings* Settings = GetDefault<UDataAssetManagerSettings>();
-	return Settings;
+	const double SizeInKb = static_cast<double>(FileSize) / ConversionFactor;
+	if (SizeInKb >= ConversionFactor)
+	{
+		return FString::Printf(TEXT("%.1f Mb"), SizeInKb / ConversionFactor);
+	}
+
+	return FString::Printf(TEXT("%.1f Kb"), SizeInKb);
 }
 
 bool DataAssetManager::DeleteMultiplyAsset(const TArray<FAssetData>& Assets, bool bShowConfirmation)
@@ -127,17 +119,25 @@ bool DataAssetManager::DeleteMultiplyAsset(const TArray<FAssetData>& Assets, boo
 		return false;
 	}
 
-	int32 DeletedCount = ObjectTools::DeleteAssets(Assets, bShowConfirmation);
-	UE_LOG(SDataAssetManagerLog, Log, TEXT("%s Deleted %d assets"), ANSI_TO_TCHAR(__FUNCTION__), DeletedCount);
+	const int32 DeletedCount = ObjectTools::DeleteAssets(Assets, bShowConfirmation);
+	if (CVarDebugDataAssetManager.GetValueOnAnyThread())
+	{
+		UE_LOG(SDataAssetManagerLog, Log, TEXT("%s Deleted %d assets"), ANSI_TO_TCHAR(__FUNCTION__), DeletedCount);
+	}
 
 	return DeletedCount > 0;
+}
+
+const UDataAssetManagerSettings* DataAssetManager::GetPluginSettings()
+{
+	return GetDefault<UDataAssetManagerSettings>();
 }
 
 void DataAssetManager::CreateNewDataAsset(UClass* AssetClass, const FString& Directory)
 {
 	if (!AssetClass || !AssetClass->IsChildOf(UDataAsset::StaticClass()))
 	{
-		UE_LOG(SDataAssetManagerLog, Warning, TEXT("%s Invalid class provided for DataAsset creation."), ANSI_TO_TCHAR(__FUNCTION__));
+		UE_LOG(SDataAssetManagerLog, Warning, TEXT("%s Invalid class provided for Data Asset creation."), ANSI_TO_TCHAR(__FUNCTION__));
 		return;
 	}
 
@@ -146,68 +146,59 @@ void DataAssetManager::CreateNewDataAsset(UClass* AssetClass, const FString& Dir
 
 	if (AssetPath.IsEmpty())
 	{
-		AssetPath = TEXT("/Game");
+		AssetPath = FDataAssetManagerPathUtils::GetRootPath();
 	}
 	else if (!AssetPath.StartsWith(TEXT("/")))
 	{
-		AssetPath = TEXT("/Game/") + AssetPath;
+		AssetPath = FDataAssetManagerPathUtils::GetRootPath() / AssetPath;
 	}
 
-
-	if (AssetPath.EndsWith("/"))
+	if (AssetPath.EndsWith(TEXT("/")))
 	{
 		AssetPath = AssetPath.LeftChop(1);
 	}
-
-	UE_LOG(SDataAssetManagerLog, Warning, TEXT("Final AssetPath: %s"), *AssetPath);
 
 	const FString BaseAssetName = TEXT("NewDataAsset");
 	FString FinalAssetName = BaseAssetName;
 
 	const FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>(DataAssetManager::ModuleName::AssetTools);
+	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(DataAssetManager::ModuleName::AssetRegistry);
 
 	int32 Suffix = 1;
 	FString TestPackageName = AssetPath / FinalAssetName;
 	FString TestObjectPath = TestPackageName + TEXT(".") + FinalAssetName;
-
-	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(DataAssetManager::ModuleName::AssetRegistry);
-
 	while (AssetRegistryModule.Get().GetAssetByObjectPath(FSoftObjectPath(TestObjectPath)).IsValid())
 	{
 		FinalAssetName = BaseAssetName + FString::Printf(TEXT("_%d"), Suffix);
 		TestPackageName = AssetPath / FinalAssetName;
 		TestObjectPath = TestPackageName + TEXT(".") + FinalAssetName;
-		Suffix++;
+		++Suffix;
 	}
 
-	UE_LOG(SDataAssetManagerLog, Warning, TEXT("Creating asset: Name=%s, Path=%s, Class=%s"),
-		*FinalAssetName, *AssetPath, *AssetClass->GetName());
-
-	UObject* const NewAsset = AssetToolsModule.Get().CreateAsset(FinalAssetName, AssetPath, AssetClass, nullptr);
-
-	if (NewAsset)
+	if (CVarDebugDataAssetManager.GetValueOnAnyThread())
 	{
-		UE_LOG(SDataAssetManagerLog, Log, TEXT("Successfully created DataAsset: %s"), *NewAsset->GetPathName());
-
-		NewAsset->MarkPackageDirty();
-		FAssetRegistryModule::AssetCreated(NewAsset);
-
-		const FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>(DataAssetManager::ModuleName::ContentBrowser);
-		TArray<UObject*> AssetsToSync;
-		AssetsToSync.Add(NewAsset);
-		ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSync);
+		UE_LOG(SDataAssetManagerLog, Log, TEXT("Creating asset: Name=%s, Path=%s, Class=%s"), *FinalAssetName, *AssetPath, *AssetClass->GetName());
 	}
-	else
+
+	UObject* NewAsset = AssetToolsModule.Get().CreateAsset(FinalAssetName, AssetPath, AssetClass, nullptr);
+	if (!NewAsset)
 	{
-		UE_LOG(SDataAssetManagerLog, Error, TEXT("FAILED to create DataAsset: Name=%s, Path=%s"),
-			*FinalAssetName, *AssetPath);
+		UE_LOG(SDataAssetManagerLog, Error, TEXT("Failed to create Data Asset: Name=%s, Path=%s"), *FinalAssetName, *AssetPath);
+		return;
 	}
+
+	NewAsset->MarkPackageDirty();
+	FAssetRegistryModule::AssetCreated(NewAsset);
+
+	const FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>(DataAssetManager::ModuleName::ContentBrowser);
+	TArray<UObject*> AssetsToSync;
+	AssetsToSync.Add(NewAsset);
+	ContentBrowserModule.Get().SyncBrowserToAssets(AssetsToSync);
 }
 
 void DataAssetManager::ProcessAssetData(const TArray<FAssetData>& RefAssetData, TFunction<void(const TArray<FAssetIdentifier>&)> ProcessFunction)
 {
 	TArray<FAssetIdentifier> AssetIdentifiers;
-	/** Converts asset data to identifiers for reference viewer / size map / audit tools */
 	IAssetManagerEditorModule::ExtractAssetIdentifiersFromAssetDataList(RefAssetData, AssetIdentifiers);
 	ProcessFunction(AssetIdentifiers);
 }
@@ -269,142 +260,47 @@ void DataAssetManager::ResetToCDO(const FDetailsObjectSet& InRootObjectSet)
 
 FString DataAssetManager::PathNormalize(const FString& InPath)
 {
-	if (InPath.IsEmpty()) return {};
-
-	// Ensure the path dont starts with a slash or a disk drive letter
-	if (!(InPath.StartsWith(TEXT("/")) || InPath.StartsWith(TEXT("\\")) || (InPath.Len() > 2 && InPath[1] == ':')))
-	{
-		return {};
-	}
-
-	FString Path = FPaths::ConvertRelativePathToFull(InPath).TrimStartAndEnd();
-	FPaths::RemoveDuplicateSlashes(Path);
-
-	// Collapse any ".." or "." references in the path
-	FPaths::CollapseRelativeDirectories(Path);
-
-	if (FPaths::GetExtension(Path).IsEmpty())
-	{
-		FPaths::NormalizeDirectoryName(Path);
-	}
-	else
-	{
-		FPaths::NormalizeFilename(Path);
-	}
-
-	// Ensure the path does not end with a trailing slash
-	if (Path.EndsWith(TEXT("/")) || Path.EndsWith(TEXT("\\")))
-	{
-		Path = Path.LeftChop(1);
-	}
-
-	return Path;
+	return FDataAssetManagerPathUtils::Normalize(InPath);
 }
 
 TTuple<FString, FString> DataAssetManager::GetNormalizedAndProjectPath(const FString& InPath)
 {
-	return TTuple<FString, FString>(
-		PathNormalize(InPath),
-		FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir()).LeftChop(1)
-	);
+	return FDataAssetManagerPathUtils::GetNormalizedAndProjectPath(InPath);
 }
 
 FString DataAssetManager::PathConvert(const FString& InPath, bool bToAbsolute)
 {
-	const auto PathsData = GetNormalizedAndProjectPath(InPath);
-	const FString& PathNormalized = PathsData.Get<0>();
-	const FString& PathProjectContent = PathsData.Get<1>();
-
-	if (PathNormalized.IsEmpty())
-	{
-		return {};
-	}
-
-	const FString LocalPathRoot = GetPathRootToString();
-
-	const bool bIsRoot = PathNormalized.StartsWith(LocalPathRoot);
-	const bool bIsProject = PathNormalized.StartsWith(PathProjectContent);
-
-	if (bToAbsolute)
-	{
-		if (bIsProject)
-		{
-			return PathNormalized;
-		}
-		if (bIsRoot)
-		{
-			FString Path = PathNormalized;
-			Path.RemoveFromStart(LocalPathRoot);
-			return Path.IsEmpty() ? PathProjectContent : PathProjectContent / Path;
-		}
-	}
-	else
-	{
-		if (bIsRoot)
-		{
-			return PathNormalized;
-		}
-		if (bIsProject)
-		{
-			FString Path = PathNormalized;
-			Path.RemoveFromStart(PathProjectContent);
-			return Path.IsEmpty() ? LocalPathRoot : LocalPathRoot / Path;
-		}
-	}
-
-	return {};
+	return FDataAssetManagerPathUtils::Convert(InPath, bToAbsolute);
 }
 
 FString DataAssetManager::PathConvertToAbsolute(const FString& InPath)
 {
-	return PathConvert(InPath, true);
+	return FDataAssetManagerPathUtils::ConvertToAbsolute(InPath);
 }
 
 FString DataAssetManager::PathConvertToRelative(const FString& InPath)
 {
-	return PathConvert(InPath, false);
+	return FDataAssetManagerPathUtils::ConvertToRelative(InPath);
 }
 
 bool DataAssetManager::FolderIsEmpty(const FString& InPath)
 {
-	if (InPath.IsEmpty())
-	{
-		return false;
-	}
-
-	const FName PathRel = FName(*PathConvertToRelative(InPath));
-	const FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-
-	if (const bool HasAsset = AssetRegistry.Get().HasAssets(PathRel, true))
-	{
-		return false;
-	}
-
-	const FString PathAbs = PathConvertToAbsolute(InPath);
-	if (PathAbs.IsEmpty()) 
-	{
-		return false;
-	}
-
-	TArray<FString> Files;
-	IFileManager::Get().FindFilesRecursive(Files, *PathAbs, TEXT("*"), true, false);
-
-	return Files.Num() == 0;
+	return FDataAssetManagerPathUtils::IsFolderEmpty(InPath);
 }
 
 FString DataAssetManager::GetPathExternalActors()
 {
-	return FString::Printf(TEXT("/Game/%s"), FPackagePath::GetExternalActorsFolderName());
+	return FDataAssetManagerPathUtils::GetExternalActorsPath();
 }
 
 FString DataAssetManager::GetPathExternalObjects()
 {
-	return FString::Printf(TEXT("/Game/%s"), FPackagePath::GetExternalObjectsFolderName());
+	return FDataAssetManagerPathUtils::GetExternalObjectsPath();
 }
 
 bool DataAssetManager::FolderIsExternal(const FString& InPath)
 {
-	return InPath.StartsWith(GetPathExternalActors()) || InPath.StartsWith(GetPathExternalObjects());
+	return FDataAssetManagerPathUtils::IsExternalFolder(InPath);
 }
 
 bool DataAssetManager::SaveDataAssetToJsonFile(const UDataAsset* DataAsset, const FString& FilePath)
@@ -417,17 +313,21 @@ bool DataAssetManager::SaveDataAssetToJsonFile(const UDataAsset* DataAsset, cons
 	FString JsonString;
 	if (!FJsonObjectConverter::UStructToJsonObjectString(DataAsset->GetClass(), DataAsset, JsonString, 0, 0))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to serialize DataAsset to JSON"));
+		UE_LOG(SDataAssetManagerLog, Warning, TEXT("Failed to serialize Data Asset to JSON"));
 		return false;
 	}
 
 	if (!FFileHelper::SaveStringToFile(JsonString, *FilePath))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to save JSON file: %s"), *FilePath);
+		UE_LOG(SDataAssetManagerLog, Warning, TEXT("Failed to save JSON file: %s"), *FilePath);
 		return false;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("DataAsset saved to JSON: %s"), *FilePath);
+	if (CVarDebugDataAssetManager.GetValueOnAnyThread())
+	{
+		UE_LOG(SDataAssetManagerLog, Log, TEXT("Data Asset saved to JSON: %s"), *FilePath);
+	}
+
 	return true;
 }
 
@@ -441,28 +341,31 @@ bool DataAssetManager::LoadDataAssetFromJsonFile(UDataAsset* DataAsset, const FS
 	FString JsonString;
 	if (!FFileHelper::LoadFileToString(JsonString, *FilePath))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to load JSON file: %s"), *FilePath);
+		UE_LOG(SDataAssetManagerLog, Warning, TEXT("Failed to load JSON file: %s"), *FilePath);
 		return false;
 	}
 
 	TSharedPtr<FJsonObject> JsonObject;
-	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
-	if (!FJsonSerializer::Deserialize(Reader, JsonObject))
+	const TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+	if (!FJsonSerializer::Deserialize(Reader, JsonObject) || !JsonObject.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to parse JSON from file: %s"), *FilePath);
+		UE_LOG(SDataAssetManagerLog, Warning, TEXT("Failed to parse JSON from file: %s"), *FilePath);
 		return false;
 	}
 
 	if (!FJsonObjectConverter::JsonObjectToUStruct(JsonObject.ToSharedRef(), DataAsset->GetClass(), DataAsset, 0, 0))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Failed to deserialize JSON to DataAsset"));
+		UE_LOG(SDataAssetManagerLog, Warning, TEXT("Failed to deserialize JSON to Data Asset"));
 		return false;
 	}
 
 	DataAsset->PostEditChange();
 	DataAsset->MarkPackageDirty();
 
-	UE_LOG(LogTemp, Log, TEXT("DataAsset loaded from JSON: %s"), *FilePath);
+	if (CVarDebugDataAssetManager.GetValueOnAnyThread())
+	{
+		UE_LOG(SDataAssetManagerLog, Log, TEXT("Data Asset loaded from JSON: %s"), *FilePath);
+	}
+
 	return true;
 }
-

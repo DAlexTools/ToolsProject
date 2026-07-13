@@ -6,7 +6,7 @@
 #include "RevisionControlStyle/RevisionControlStyle.h"
 #include "ISourceControlModule.h"
 #include "ISourceControlProvider.h"
-#include "FunctionLibraries/DataAssetManagerFunctionLibrary.h"
+#include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 #include "DataAssetManagerTypes.h"
 
 class SLayeredImage;

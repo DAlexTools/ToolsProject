@@ -9,7 +9,7 @@
 #include "DeveloperSettings/DataAssetManagerSettings.h"
 #include "Engine/DataAsset.h"
 #include "FileHelpers.h"
-#include "FunctionLibraries/DataAssetManagerFunctionLibrary.h"
+#include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 #include "IAssetTools.h"
 #include "Interfaces/IPluginManager.h"
 #include "Logging/MessageLog.h"
@@ -190,18 +190,7 @@ namespace
 		return !Property->HasAnyPropertyFlags(IgnoredFlags);
 	}
 
-	bool ArePropertyValuesIdentical(const FProperty* Property, const UObject* LeftAsset, const UObject* RightAsset)
-	{
-		for (int32 Index = 0; Index < Property->ArrayDim; ++Index)
-		{
-			if (!Property->Identical_InContainer(LeftAsset, RightAsset, Index))
-			{
-				return false;
-			}
-		}
 
-		return true;
-	}
 
 	FString ExportPropertyValue(const FProperty* Property, UObject* Asset)
 	{
@@ -667,7 +656,7 @@ FDataAssetDiffResult FDataAssetManagerAssetService::DiffAssets(
 	for (TFieldIterator<FProperty> PropertyIterator(LeftClass, EFieldIteratorFlags::IncludeSuper); PropertyIterator; ++PropertyIterator)
 	{
 		const FProperty* Property = *PropertyIterator;
-		if (!ShouldDiffProperty(Property) || ArePropertyValuesIdentical(Property, LeftAsset, RightAsset))
+		if (!ShouldDiffProperty(Property) || DataAssetManager::ArePropertyValuesIdentical(Property, LeftAsset, RightAsset))
 		{
 			continue;
 		}
@@ -723,7 +712,7 @@ bool FDataAssetManagerAssetService::CopyDiffPropertyValue(
 		return false;
 	}
 
-	if (ArePropertyValuesIdentical(Property, SourceAsset, TargetAsset))
+	if (DataAssetManager::ArePropertyValuesIdentical(Property, SourceAsset, TargetAsset))
 	{
 		return true;
 	}
