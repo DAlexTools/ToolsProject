@@ -1,85 +1,60 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright 2025 DimAlek. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
-#include "GameProjectUtils.h"
 
 /**
  * @brief Main module class for the C++ Template Generator plugin.
  *
- * This class implements the IModuleInterface and serves as the entry point
- * for the C++ Template Generator plugin. It handles plugin lifecycle events,
- * registers menu extensions, and provides the core functionality for
- * generating C++ class templates from selected parent classes.
+ * Registers the editor menu integration for creating C++ classes from a
+ * curated set of template parent classes and provides navigation to the
+ * plugin settings.
  *
- * @extends IModuleInterface
- *
- * @see UCppTemplateGeneratorSettings for plugin configuration options.
+ * @see UCppTemplateGeneratorSettings
  */
 class FCppTemplateGeneratorModule : public IModuleInterface
 {
 public:
 	/**
-	 * @brief IModuleInterface implementation
-	 * @{
-	 */
-
-	/**
-	 * @brief Initializes the plugin module.
-	 *
-	 * Called when the module is loaded by the Unreal Engine. This method sets up
-	 * the plugin's resources, registers menu extensions, and prepares the
-	 * template generation system for use.
-	 *
-	 * @note This is called early in the engine startup process.
-	 *
-	 * @see ShutdownModule
+	 * @brief Registers the plugin menu extension during module startup.
 	 */
 	virtual void StartupModule() override;
 
 	/**
-	 * @brief Shuts down the plugin module.
-	 *
-	 * Called when the module is being unloaded. This method cleans up any
-	 * resources allocated by the plugin, unregisters menu extensions, and
-	 * performs any necessary cleanup before the module is removed from memory.
-	 *
-	 * @note This is called during engine shutdown or hot reload.
-	 *
-	 * @see StartupModule
+	 * @brief Unregisters menu-related callbacks during module shutdown.
 	 */
 	virtual void ShutdownModule() override;
 
-	/** @} */ // End of IModuleInterface implementation
-
 	/**
-	 * @brief Opens the template creation dialog for a specific parent class.
+	 * @brief Opens the standard Add Code dialog for a validated template class.
 	 *
-	 * This method initiates the template generation workflow for the specified
-	 * parent class. It typically opens a dialog or wizard that guides the user
-	 * through creating a new C++ class that inherits from the provided parent.
-	 *
-	 * @param[in] ParentClass The UClass to use as the parent/base for the new template.
-	 *                        Must be a valid class from the TemplateClasses array
-	 *                        defined in UCppTemplateGeneratorSettings.
-	 *
-	 *
-		 * @see UCppTemplateGeneratorSettings::TemplateClasses
-		 */
+	 * @param ParentClass Native Actor or ActorComponent-derived class selected
+	 * from the configured template list.
+	 */
 	void OpenCreateTemplateForClass(UClass* ParentClass);
 
 	/**
-	 * @brief Registers custom menu entries for the plugin.
-	 *
-	 * This method adds the plugin's menu items to the Unreal Editor's main menu,
-	 * toolbar, or context menus. Typically adds entries under "File > New C++ Class"
-	 * or similar locations to provide quick access to template generation features.
-	 *
-	 * @note Menu registration should occur during StartupModule.
-	 *
-	 * @see StartupModule
+	 * @brief Opens this plugin's settings page in the editor settings viewer.
+	 */
+	void OpenPluginSettings() const;
+
+	/**
+	 * @brief Registers the main Tools submenu and its entries.
 	 */
 	void RegisterMenus();
+
+private:
+	/**
+	 * @brief Validates whether a class can be used as a template parent.
+	 *
+	 * Only native Actor and ActorComponent hierarchies are supported by the
+	 * Add Code flow. Deprecated and replaced classes are rejected.
+	 *
+	 * @param TemplateClass Class to validate.
+	 * @return true if the class can be shown in the submenu and passed to the
+	 * Add Code dialog; otherwise false.
+	 */
+	bool IsValidTemplateClass(const UClass* TemplateClass) const;
 };

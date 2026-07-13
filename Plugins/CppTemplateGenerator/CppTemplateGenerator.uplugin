@@ -19,6 +19,11 @@
 			"Name": "CppTemplateGenerator",
 			"Type": "Editor",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CppTemplateGeneratorTests",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
 		}
 	]
 }
