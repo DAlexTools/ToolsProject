@@ -20,6 +20,8 @@ public class DataAssetManagerTests : ModuleRules
 				"AssetRegistry",
 				"AssetTools",
 				"EditorScriptingUtilities",
+				"DeveloperSettings",
+				"PropertyEditor",
 				"SourceControl",
 				"DataAssetManager"
 			});

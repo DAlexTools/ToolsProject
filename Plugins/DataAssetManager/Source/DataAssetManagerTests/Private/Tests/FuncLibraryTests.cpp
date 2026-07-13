@@ -1,119 +1,20 @@
 // Copyright (c) 2026 DimAlek. All Rights Reserved.
 
-#include "FunctionLibraries/DataAssetManagerFunctionLibrary.h"
-#include "Tests/DataAssetManagerTestTypes.h"
+#include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
+#include "Tests/DataAssetManagerTestHelpers.h"
 #include "Utils/DataAssetManagerPathUtils.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
 #include "Editor.h"
 #include "EditorAssetLibrary.h"
+#include "IDetailRootObjectCustomization.h"
 #include "Misc/AutomationTest.h"
 #include "Modules/ModuleManager.h"
 #include "ObjectTools.h"
 #include "UObject/SavePackage.h"
 
 #if !UE_BUILD_SHIPPING && WITH_DEV_AUTOMATION_TESTS
-
-namespace DataAssetManagerTests
-{
-	const FString TestRootPath = TEXT("/Game/DataAssetManagerTests");
-
-	FString MakeUniqueAssetName(const TCHAR* Prefix)
-	{
-		return FString::Printf(TEXT("%s_%s"), Prefix, *FGuid::NewGuid().ToString(EGuidFormats::Digits));
-	}
-
-	FAssetData GetAssetDataForObject(const UObject* Asset)
-	{
-		if (!Asset)
-		{
-			return FAssetData();
-		}
-
-		return FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssetByObjectPath(FSoftObjectPath(Asset));
-	}
-
-	bool SaveAssetPackage(UObject* Asset, FString& OutPackageFileName)
-	{
-		if (!Asset)
-		{
-			return false;
-		}
-
-		UPackage* const Package = Asset->GetOutermost();
-		OutPackageFileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
-
-		FSavePackageArgs SaveArgs;
-		SaveArgs.TopLevelFlags = EObjectFlags::RF_Public | EObjectFlags::RF_Standalone;
-		SaveArgs.Error = GError;
-		SaveArgs.SaveFlags = SAVE_NoError;
-		SaveArgs.bWarnOfLongFilename = false;
-
-		return UPackage::SavePackage(Package, Asset, *OutPackageFileName, SaveArgs);
-	}
-
-	class FScopedTestDataAsset final
-	{
-	public:
-		explicit FScopedTestDataAsset(const FString& AssetName, const FString& PackagePath = TestRootPath)
-		{
-			Asset = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools")
-						.Get()
-						.CreateAsset(AssetName, PackagePath, UTestDataAsset::StaticClass(), nullptr);
-			AssetData = GetAssetDataForObject(Asset);
-		}
-
-		~FScopedTestDataAsset()
-		{
-			if (AssetData.IsValid())
-			{
-				ObjectTools::DeleteAssets({ AssetData }, false);
-			}
-
-			if (!PackageFileName.IsEmpty())
-			{
-				IFileManager::Get().Delete(*PackageFileName);
-			}
-
-			FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().ScanPathsSynchronous({ TestRootPath }, true);
-		}
-
-		UObject* GetAsset() const
-		{
-			return Asset;
-		}
-
-		const FAssetData& GetAssetData() const
-		{
-			return AssetData;
-		}
-
-		bool Save()
-		{
-			const bool bSaved = SaveAssetPackage(Asset, PackageFileName);
-			AssetData = GetAssetDataForObject(Asset);
-			return bSaved;
-		}
-
-	private:
-		UObject* Asset = nullptr;
-		FAssetData AssetData;
-		FString PackageFileName;
-	};
-
-	void DeleteTestRootAssets()
-	{
-		TArray<FAssetData> AssetsToDelete;
-		FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().GetAssetsByPath(FName(*TestRootPath), AssetsToDelete, true, false);
-		if (AssetsToDelete.Num() > 0)
-		{
-			ObjectTools::DeleteAssets(AssetsToDelete, false);
-		}
-
-		FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get().ScanPathsSynchronous({ TestRootPath }, true);
-	}
-}
 
 IMPLEMENT_COMPLEX_AUTOMATION_TEST(
 	FDataAssetManagerFunctionLibraryTest,
@@ -160,6 +61,24 @@ void FDataAssetManagerFunctionLibraryTest::GetTests(TArray<FString>& OutBeautifi
 
 	OutBeautifiedNames.Add(TEXT("BuildClipboardEntry"));
 	OutTestCommands.Add(TEXT("BuildClipboardEntry"));
+
+	OutBeautifiedNames.Add(TEXT("InvalidInputs"));
+	OutTestCommands.Add(TEXT("InvalidInputs"));
+
+	OutBeautifiedNames.Add(TEXT("PathUtils.EdgeCases"));
+	OutTestCommands.Add(TEXT("PathUtilsEdgeCases"));
+
+	OutBeautifiedNames.Add(TEXT("LegacyPathFunctions"));
+	OutTestCommands.Add(TEXT("LegacyPathFunctions"));
+
+	OutBeautifiedNames.Add(TEXT("JsonRoundTrip"));
+	OutTestCommands.Add(TEXT("JsonRoundTrip"));
+
+	OutBeautifiedNames.Add(TEXT("ResetToCDO"));
+	OutTestCommands.Add(TEXT("ResetToCDO"));
+
+	OutBeautifiedNames.Add(TEXT("RemoveDelegateHandleSafe"));
+	OutTestCommands.Add(TEXT("RemoveDelegateHandleSafe"));
 }
 
 bool FDataAssetManagerFunctionLibraryTest::RunTest(const FString& Parameters)
@@ -271,13 +190,27 @@ bool FDataAssetManagerFunctionLibraryTest::RunTest(const FString& Parameters)
 #if WITH_EDITOR
 		DataAssetManagerTests::DeleteTestRootAssets();
 		DataAssetManager::CreateNewDataAsset(UTestDataAsset::StaticClass(), DataAssetManagerTests::TestRootPath);
+		DataAssetManager::CreateNewDataAsset(UTestDataAsset::StaticClass(), DataAssetManagerTests::TestRootPath);
 
 		const FAssetRegistryModule& RegistryModule{ FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry") };
 		TArray<FAssetData> AssetsFound{};
 		RegistryModule.Get().GetAssetsByPath(FName(*DataAssetManagerTests::TestRootPath), AssetsFound, true, false);
 
-		const bool bExists = AssetsFound.Num() > 0;
-		TestTrue(TEXT("CreateNewDataAsset should create an asset"), bExists);
+		TestEqual(TEXT("CreateNewDataAsset should create unique assets on repeated calls"), AssetsFound.Num(), 2);
+		TestTrue(
+			TEXT("First generated asset should use the base name"),
+			AssetsFound.ContainsByPredicate(
+				[](const FAssetData& AssetData)
+				{
+					return AssetData.AssetName == FName(TEXT("NewDataAsset"));
+				}));
+		TestTrue(
+			TEXT("Second generated asset should use a numeric suffix"),
+			AssetsFound.ContainsByPredicate(
+				[](const FAssetData& AssetData)
+				{
+					return AssetData.AssetName == FName(TEXT("NewDataAsset_1"));
+				}));
 		DataAssetManagerTests::DeleteTestRootAssets();
 #endif
 	}
@@ -302,6 +235,9 @@ bool FDataAssetManagerFunctionLibraryTest::RunTest(const FString& Parameters)
 	if (Parameters == TEXT("BuildClipboardEntry"))
 	{
 #if WITH_EDITOR
+		TestTrue(TEXT("Invalid asset data returns empty clipboard entry"), DataAssetManager::BuildClipboardEntry(FAssetData(), false).IsEmpty());
+		TestTrue(TEXT("Invalid asset data returns empty path entry"), DataAssetManager::BuildClipboardEntry(FAssetData(), true).IsEmpty());
+
 		DataAssetManagerTests::FScopedTestDataAsset TempAsset(DataAssetManagerTests::MakeUniqueAssetName(TEXT("TestClipboardAsset")));
 
 		if (!TempAsset.GetAsset())
@@ -335,6 +271,157 @@ bool FDataAssetManagerFunctionLibraryTest::RunTest(const FString& Parameters)
 				Result.EndsWith(TEXT(".uasset")) && FPaths::FileExists(Result));
 		}
 #endif
+	}
+
+	if (Parameters == TEXT("InvalidInputs"))
+	{
+		TestEqual(TEXT("Invalid asset disk size should be Unknown"), DataAssetManager::GetAssetDiskSize(FAssetData()), FString(TEXT("Unknown")));
+		TestFalse(TEXT("Deleting an empty asset list should fail"), DataAssetManager::DeleteMultiplyAsset({}));
+
+#if WITH_EDITOR
+		DataAssetManagerTests::DeleteTestRootAssets();
+		DataAssetManager::CreateNewDataAsset(nullptr, DataAssetManagerTests::TestRootPath);
+		DataAssetManager::CreateNewDataAsset(UObject::StaticClass(), DataAssetManagerTests::TestRootPath);
+
+		TArray<FAssetData> AssetsFound;
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry")
+			.Get()
+			.GetAssetsByPath(FName(*DataAssetManagerTests::TestRootPath), AssetsFound, true, false);
+		TestEqual(TEXT("Invalid DataAsset creation requests should not create assets"), AssetsFound.Num(), 0);
+
+		bool bProcessCallbackCalled = false;
+		DataAssetManager::ProcessAssetData({},
+			[&bProcessCallbackCalled, this](const TArray<FAssetIdentifier>& Identifiers)
+			{
+				bProcessCallbackCalled = true;
+				TestEqual(TEXT("Empty asset data list resolves to zero identifiers"), Identifiers.Num(), 0);
+			});
+		TestTrue(TEXT("ProcessAssetData should call the callback for empty input"), bProcessCallbackCalled);
+		DataAssetManagerTests::DeleteTestRootAssets();
+#endif
+	}
+
+	if (Parameters == TEXT("PathUtilsEdgeCases"))
+	{
+		const FString ProjectContentPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir().LeftChop(1));
+
+		TestTrue(TEXT("Normalize rejects empty input"), FDataAssetManagerPathUtils::Normalize(TEXT("")).IsEmpty());
+		TestTrue(TEXT("Normalize rejects relative input"), FDataAssetManagerPathUtils::Normalize(TEXT("Relative/Folder")).IsEmpty());
+
+		const FString NormalizedGamePath = FDataAssetManagerPathUtils::Normalize(TEXT("/Game//Folder/../Folder2/"));
+		TestFalse(TEXT("Normalize removes trailing slash"), NormalizedGamePath.EndsWith(TEXT("/")));
+		TestFalse(TEXT("Normalize removes duplicate slashes"), NormalizedGamePath.Contains(TEXT("//")));
+
+		TestEqual(TEXT("ConvertToAbsolute maps /Game to content root"), FDataAssetManagerPathUtils::ConvertToAbsolute(TEXT("/Game")), ProjectContentPath);
+		TestEqual(TEXT("ConvertToRelative maps content root to /Game"), FDataAssetManagerPathUtils::ConvertToRelative(ProjectContentPath), FString(TEXT("/Game")));
+		TestTrue(TEXT("ConvertToAbsolute rejects relative input"), FDataAssetManagerPathUtils::ConvertToAbsolute(TEXT("Relative/Folder")).IsEmpty());
+		TestTrue(TEXT("ConvertToRelative rejects paths outside project content"), FDataAssetManagerPathUtils::ConvertToRelative(TEXT("C:/DataAssetManagerOutside")).IsEmpty());
+
+		const TTuple<FString, FString> Paths = FDataAssetManagerPathUtils::GetNormalizedAndProjectPath(TEXT("/Game/Test"));
+		TestFalse(TEXT("GetNormalizedAndProjectPath should normalize supported paths"), Paths.Get<0>().IsEmpty());
+		TestEqual(TEXT("GetNormalizedAndProjectPath should return content root"), Paths.Get<1>(), ProjectContentPath);
+
+		TestFalse(TEXT("IsFolderEmpty rejects empty input"), FDataAssetManagerPathUtils::IsFolderEmpty(TEXT("")));
+		TestFalse(TEXT("IsFolderEmpty rejects relative input"), FDataAssetManagerPathUtils::IsFolderEmpty(TEXT("Relative/Folder")));
+
+		const FString FolderDiskPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir()) / TEXT("TempEmptyAbsoluteTest");
+		IFileManager::Get().MakeDirectory(*FolderDiskPath, true);
+		TestTrue(TEXT("IsFolderEmpty accepts an empty absolute content path"), FDataAssetManagerPathUtils::IsFolderEmpty(FolderDiskPath));
+
+		const FString TempFile = FolderDiskPath / TEXT("TestFile.tmp");
+		FFileHelper::SaveStringToFile(TEXT("Dummy"), *TempFile);
+		TestFalse(TEXT("IsFolderEmpty detects files through absolute content paths"), FDataAssetManagerPathUtils::IsFolderEmpty(FolderDiskPath));
+
+		IFileManager::Get().Delete(*TempFile);
+		IFileManager::Get().DeleteDirectory(*FolderDiskPath, false, true);
+	}
+
+	if (Parameters == TEXT("LegacyPathFunctions"))
+	{
+		const FString ProjectContentPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectContentDir()).LeftChop(1);
+
+		TestTrue(TEXT("PathNormalize rejects relative input"), DataAssetManager::PathNormalize(TEXT("Relative/Folder")).IsEmpty());
+		TestEqual(TEXT("PathConvertToAbsolute maps /Game to content root"), DataAssetManager::PathConvertToAbsolute(TEXT("/Game")), ProjectContentPath);
+		TestEqual(TEXT("PathConvertToRelative maps content root to /Game"), DataAssetManager::PathConvertToRelative(ProjectContentPath), FString(TEXT("/Game")));
+		TestEqual(TEXT("GetPathExternalActors delegates to package path"), DataAssetManager::GetPathExternalActors(), FDataAssetManagerPathUtils::GetExternalActorsPath());
+		TestEqual(TEXT("GetPathExternalObjects delegates to package path"), DataAssetManager::GetPathExternalObjects(), FDataAssetManagerPathUtils::GetExternalObjectsPath());
+		TestTrue(TEXT("FolderIsExternal detects external actors path"), DataAssetManager::FolderIsExternal(DataAssetManager::GetPathExternalActors()));
+		TestFalse(TEXT("FolderIsExternal rejects regular game path"), DataAssetManager::FolderIsExternal(TEXT("/Game/Regular")));
+		TestFalse(TEXT("FolderIsEmpty rejects empty input"), DataAssetManager::FolderIsEmpty(TEXT("")));
+	}
+
+	if (Parameters == TEXT("JsonRoundTrip"))
+	{
+		UTestDataAsset* Asset = NewObject<UTestDataAsset>(GetTransientPackage(), TEXT("JsonRoundTripAsset"));
+		TestNotNull(TEXT("Transient test DataAsset should be created"), Asset);
+
+		const FString JsonDirectory = FPaths::ProjectSavedDir() / TEXT("Automation/DataAssetManager");
+		IFileManager::Get().MakeDirectory(*JsonDirectory, true);
+		const FString JsonFilePath = JsonDirectory / TEXT("JsonRoundTrip.json");
+		const FString BadJsonFilePath = JsonDirectory / TEXT("BadJson.json");
+		IFileManager::Get().Delete(*JsonFilePath);
+		IFileManager::Get().Delete(*BadJsonFilePath);
+
+		TestFalse(TEXT("SaveDataAssetToJsonFile rejects null assets"), DataAssetManager::SaveDataAssetToJsonFile(nullptr, JsonFilePath));
+		TestFalse(TEXT("LoadDataAssetFromJsonFile rejects null assets"), DataAssetManager::LoadDataAssetFromJsonFile(nullptr, JsonFilePath));
+		TestFalse(TEXT("LoadDataAssetFromJsonFile rejects missing files"), DataAssetManager::LoadDataAssetFromJsonFile(Asset, JsonFilePath));
+
+		Asset->TestProperty = 42;
+		TestTrue(TEXT("SaveDataAssetToJsonFile writes valid JSON"), DataAssetManager::SaveDataAssetToJsonFile(Asset, JsonFilePath));
+		TestTrue(TEXT("JSON file should exist after save"), FPaths::FileExists(JsonFilePath));
+
+		Asset->TestProperty = 7;
+		TestTrue(TEXT("LoadDataAssetFromJsonFile applies serialized values"), DataAssetManager::LoadDataAssetFromJsonFile(Asset, JsonFilePath));
+		TestEqual(TEXT("LoadDataAssetFromJsonFile should restore TestProperty"), Asset->TestProperty, 42);
+
+		FFileHelper::SaveStringToFile(TEXT("{ not valid json"), *BadJsonFilePath);
+		TestFalse(TEXT("LoadDataAssetFromJsonFile rejects malformed JSON"), DataAssetManager::LoadDataAssetFromJsonFile(Asset, BadJsonFilePath));
+
+		IFileManager::Get().Delete(*JsonFilePath);
+		IFileManager::Get().Delete(*BadJsonFilePath);
+	}
+
+	if (Parameters == TEXT("ResetToCDO"))
+	{
+		UTestDataAsset* Asset = NewObject<UTestDataAsset>(GetTransientPackage(), TEXT("ResetToCDOAsset"));
+		TestNotNull(TEXT("Transient test DataAsset should be created"), Asset);
+
+		Asset->TestProperty = 123;
+
+		FDetailsObjectSet RootObjectSet;
+		RootObjectSet.RootObjects.Add(Asset);
+		RootObjectSet.CommonBaseClass = UTestDataAsset::StaticClass();
+		DataAssetManager::ResetToCDO(RootObjectSet);
+
+		TestEqual(TEXT("ResetToCDO restores the default object value"), Asset->TestProperty, GetDefault<UTestDataAsset>()->TestProperty);
+
+		Asset->TestProperty = 456;
+		FDetailsObjectSet EmptyRootObjectSet;
+		EmptyRootObjectSet.CommonBaseClass = UTestDataAsset::StaticClass();
+		DataAssetManager::ResetToCDO(EmptyRootObjectSet);
+		TestEqual(TEXT("ResetToCDO ignores empty object sets"), Asset->TestProperty, 456);
+	}
+
+	if (Parameters == TEXT("RemoveDelegateHandleSafe"))
+	{
+		FSimpleMulticastDelegate Delegate;
+		int32 Calls = 0;
+		FDelegateHandle Handle = Delegate.AddLambda(
+			[&Calls]()
+			{
+				++Calls;
+			});
+
+		TestTrue(TEXT("Delegate handle should start valid"), Handle.IsValid());
+		DataAssetManager::RemoveDelegateHandleSafe(Handle, Delegate);
+		TestFalse(TEXT("RemoveDelegateHandleSafe resets removed handles"), Handle.IsValid());
+
+		Delegate.Broadcast();
+		TestEqual(TEXT("Removed delegate should not be called"), Calls, 0);
+
+		FDelegateHandle InvalidHandle;
+		DataAssetManager::RemoveDelegateHandleSafe(InvalidHandle, Delegate);
+		TestFalse(TEXT("Invalid delegate handle stays invalid"), InvalidHandle.IsValid());
 	}
 
 	return true;

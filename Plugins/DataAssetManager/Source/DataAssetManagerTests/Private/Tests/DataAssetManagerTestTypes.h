@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Misc/DataValidation.h"
 #include "Misc/AutomationTest.h"
 #include "UI/SDataAssetManagerWidget.h"
 #include "Widgets/Views/SHeaderRow.h"
@@ -34,6 +35,38 @@ public:
 	/** @brief Integer property used by tests that need editable asset data. */
 	UPROPERTY(EditDefaultsOnly)
 	int32 TestProperty = 0;
+};
+
+/**
+ * @brief Alternate data asset class used by tests that need class mismatches.
+ */
+UCLASS(BlueprintType)
+class UAlternateTestDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	/** @brief Distinct editable property used by class-filter and diff tests. */
+	UPROPERTY(EditDefaultsOnly)
+	FString AlternateProperty;
+};
+
+/**
+ * @brief Data asset type that always fails validation for service tests.
+ */
+UCLASS(BlueprintType)
+class UInvalidTestDataAsset : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+#if WITH_EDITOR
+	virtual EDataValidationResult IsDataValid(FDataValidationContext& Context) const override
+	{
+		Context.AddError(NSLOCTEXT("DataAssetManagerTests", "InvalidTestDataAssetError", "Invalid test data asset."));
+		return EDataValidationResult::Invalid;
+	}
+#endif
 };
 
 #if WITH_DEV_AUTOMATION_TESTS

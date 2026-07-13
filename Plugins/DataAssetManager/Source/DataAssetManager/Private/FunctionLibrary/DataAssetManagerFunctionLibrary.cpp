@@ -23,6 +23,62 @@
 #include "Serialization/JsonSerializer.h"
 #include "IContentBrowserSingleton.h"
 
+namespace
+{
+	bool ShouldResetPropertyToDefault(const FProperty* Property)
+	{
+		if (!Property || !Property->HasAnyPropertyFlags(CPF_Edit))
+		{
+			return false;
+		}
+
+		constexpr EPropertyFlags IgnoredFlags =
+			CPF_Transient |
+			CPF_Deprecated |
+			CPF_DuplicateTransient |
+			CPF_NonPIEDuplicateTransient;
+
+		return !Property->HasAnyPropertyFlags(IgnoredFlags);
+	}
+
+	bool ArePropertyValuesIdentical(const FProperty* Property, const UObject* LeftObject, const UObject* RightObject)
+	{
+		for (int32 Index = 0; Index < Property->ArrayDim; ++Index)
+		{
+			if (!Property->Identical_InContainer(LeftObject, RightObject, Index))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool ResetEditablePropertiesToCDO(UObject* MutableObject, const UObject* DefaultObject)
+	{
+		bool bChanged = false;
+
+		for (TFieldIterator<FProperty> PropertyIterator(MutableObject->GetClass(), EFieldIteratorFlags::IncludeSuper); PropertyIterator; ++PropertyIterator)
+		{
+			const FProperty* Property = *PropertyIterator;
+			if (!ShouldResetPropertyToDefault(Property) || ArePropertyValuesIdentical(Property, MutableObject, DefaultObject))
+			{
+				continue;
+			}
+
+			if (!bChanged)
+			{
+				MutableObject->Modify();
+				bChanged = true;
+			}
+
+			Property->CopyCompleteValue_InContainer(MutableObject, DefaultObject);
+		}
+
+		return bChanged;
+	}
+}
+
 FString DataAssetManager::GetAssetDiskSize(const FAssetData& AssetData)
 {
 	TTuple<double, double, FString, FString> SizeAndText(0.0, 0.0, TEXT("Unknown"), TEXT("Unknown"));
@@ -197,11 +253,12 @@ void DataAssetManager::ResetToCDO(const FDetailsObjectSet& InRootObjectSet)
 			continue;
 		}
 
-		MutableObject->Modify();
-		UEngine::CopyPropertiesForUnrelatedObjects(DefaultObject, MutableObject);
-		MutableObject->PostEditChange();
-		MutableObject->MarkPackageDirty();
-		bResetAnyObject = true;
+		if (ResetEditablePropertiesToCDO(MutableObject, DefaultObject))
+		{
+			MutableObject->PostEditChange();
+			MutableObject->MarkPackageDirty();
+			bResetAnyObject = true;
+		}
 	}
 
 	if (!bResetAnyObject)
