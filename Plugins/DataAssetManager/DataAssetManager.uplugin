@@ -17,8 +17,13 @@
 	"Modules": [
 		{
 			"Name": "DataAssetManager",
-			"Type": "UncookedOnly",
+			"Type": "Editor",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "DataAssetManagerTests",
+			"Type": "Editor",
+			"LoadingPhase": "PostEngineInit"
 		}
 	],
 	"Plugins": [

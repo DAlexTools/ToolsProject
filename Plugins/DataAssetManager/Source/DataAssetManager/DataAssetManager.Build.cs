@@ -1,4 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -25,6 +25,9 @@ public class DataAssetManager : ModuleRules
             {
                 "Core",
                 "CoreUObject",
+                "Engine",
+                "AssetRegistry",
+                "ApplicationCore",
             }
             );
 
@@ -32,9 +35,6 @@ public class DataAssetManager : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "Engine",
-                "AssetRegistry",
-                "ApplicationCore",
                 "Projects",
                 "InputCore",
                 "EditorFramework",
@@ -63,9 +63,9 @@ public class DataAssetManager : ModuleRules
                 "OutputLog",
                 "Json",
                 "JsonUtilities",
-                "WorkspaceMenuStructure",
-                "GameProjectGeneration"
-            }   
+                "LevelEditor",
+                "DesktopPlatform"
+            }
             );
 
 

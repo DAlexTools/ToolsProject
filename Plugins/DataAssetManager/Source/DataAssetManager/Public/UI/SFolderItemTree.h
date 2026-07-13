@@ -1,61 +1,57 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "DataAssetManagerTypes.h"
 
- /**
-  * A single row widget used to represent a folder item in an asset tree view.
-  * Implements multi-column support for folder display within an STreeView.
-  */
+/**
+ * @brief Multi-column row widget that renders one folder tree node.
+ */
 class DATAASSETMANAGER_API SFolderItemTree final : public SMultiColumnTableRow<TSharedPtr<SFolderItemTree>>
 {
 public:
+	/** @brief Slate arguments for constructing a folder tree row. */
 	SLATE_BEGIN_ARGS(SFolderItemTree) {}
-		/** The data model representing this folder node. */
+
+		/** @brief Folder node represented by this row. */
 		SLATE_ARGUMENT(TSharedPtr<FAssetTreeFolderNode>, Item)
 
-		/** The text to highlight within the folder name, typically used for search filtering. */
-		SLATE_ARGUMENT(FText, HighlightText)
+		/** @brief Search text highlighted in the folder label. */
+		SLATE_ARGUMENT(FText, HightlightText)
+
 	SLATE_END_ARGS()
 
 	/**
-	 * Constructs the folder row widget using the specified arguments and owning table.
-	 *
-	 * @param InArgs Construction arguments passed via SLATE macros.
-	 * @param InTable Reference to the parent table view widget.
+	 * @brief Constructs the folder row widget.
+	 * @param InArgs Slate construction arguments.
+	 * @param InTable Owning table view.
 	 */
 	void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& InTable);
 
 	/**
-	 * Generates the widget to use for the specified column name.
-	 * Used by STreeView to populate each column in the row.
-	 *
-	 * @param InColumnName The name of the column for which to generate content.
-	 * @return The widget representing the column's content.
+	 * @brief Generates content for a folder tree column.
+	 * @param InColumnName Column identifier.
+	 * @return Widget displayed in the column.
 	 */
 	virtual TSharedRef<SWidget> GenerateWidgetForColumn(const FName& InColumnName) override;
 
 private:
 	/**
-	 * Gets the appropriate icon to use for this folder item.
-	 *
-	 * @return A pointer to the Slate brush representing the folder icon.
+	 * @brief Returns the icon brush used for the folder node.
+	 * @return Folder icon brush.
 	 */
 	const FSlateBrush* GetFolderIcon() const;
 
 	/**
-	 * Gets the color used to tint this folder item.
-	 * This can be used to visually distinguish different folder states.
-	 *
-	 * @return A Slate color representing the folder's display tint.
+	 * @brief Returns the display color used for the folder node.
+	 * @return Folder text/icon color.
 	 */
 	FSlateColor GetFolderColor() const;
-	
-	/** The text to be highlighted within the folder label. */
-	FText HighlightText;
 
-	/** The underlying data representing this folder item. */
-	TSharedPtr<FAssetTreeFolderNode> Item;
+	/** @brief Search text highlighted in the folder name. */
+	FText HighlightText{};
+
+	/** @brief Folder node represented by this row. */
+	TSharedPtr<FAssetTreeFolderNode> Item{};
 };

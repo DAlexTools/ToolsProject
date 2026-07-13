@@ -1,14 +1,16 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #include "UI/SFolderTreeWidget.h"
+#include "Algo/AnyOf.h"
+#include "Utils/DataAssetManagerPathUtils.h"
 
+/* clang-format off */
 void SFolderTreeWidget::Construct(const FArguments& InArgs)
 {
 	bCanSupportFocus = true;
 
 	SAssignNew(FolderTreeState.TreeListView, STreeView<TSharedPtr<FAssetTreeFolderNode>>)
-		.TreeItemsSource(&FolderTreeData.TreeListItems)
+		.TreeItemsSource(&FolderTreeItem.TreeListItems)
 		.SelectionMode(ESelectionMode::Single)
 		.OnGenerateRow(this, &SFolderTreeWidget::OnTreeGenerateRow)
 		.OnGetChildren(this, &SFolderTreeWidget::OnTreeGetChildren)
@@ -16,7 +18,7 @@ void SFolderTreeWidget::Construct(const FArguments& InArgs)
 		.OnExpansionChanged(this, &SFolderTreeWidget::OnTreeExpansionChanged)
 		.HeaderRow(GetTreeHeaderRow());
 
-	TSharedRef<SScrollBox> ScrollBox = SNew(SScrollBox)
+	TSharedPtr<SScrollBox> ScrollBox = SNew(SScrollBox)
 		.ScrollWhenFocusChanges(EScrollWhenFocusChanges::NoScroll)
 		.AnimateWheelScrolling(true)
 		.AllowOverscroll(EAllowOverscroll::No)
@@ -25,74 +27,96 @@ void SFolderTreeWidget::Construct(const FArguments& InArgs)
 			FolderTreeState.TreeListView.ToSharedRef()
 		];
 
-
-	TSharedRef<SVerticalBox> VerticalBox = SNew(SVerticalBox);
-	VerticalBox->AddSlot().AutoHeight()
+	TSharedPtr<SVerticalBox> VerticalBox = SNew(SVerticalBox)
+		+ SVerticalBox::Slot()
+		.AutoHeight()
 		[
 			SAssignNew(FolderTreeState.SearchBox, SSearchBox)
 				.HintText(FText::FromString("Search folders..."))
 				.OnTextChanged(this, &SFolderTreeWidget::OnSearchTextChanged)
 				.OnTextCommitted(this, &SFolderTreeWidget::OnSearchTextCommitted)
-		];
-
-	VerticalBox->AddSlot().FillHeight(1.0f)
+		]
+		+ SVerticalBox::Slot()
+		.FillHeight(1.0f)
 		[
 			SNew(SScrollBox)
-			+ SScrollBox::Slot()
-			[
-				FolderTreeState.TreeListView.ToSharedRef()
-			]
+				+ SScrollBox::Slot()
+				[
+					ScrollBox.ToSharedRef()
+				]
 		];
 
 	ChildSlot
 		[
-			VerticalBox
+			VerticalBox.ToSharedRef()
 		];
 
 	UpdateFolderTree();
 }
+/* clang-format on */
 
-FString SFolderTreeWidget::GetSelectedDirectory() const
+const FString& SFolderTreeWidget::GetSelectedDirectory() const
 {
-	return FolderTreeData.SelectedDirectory;
-}
-
-void SFolderTreeWidget::OnSearchTextCommitted(const FText& InText, ETextCommit::Type CommitInfo)
-{
-	FolderTreeState.TreeSearchText = InText;
-	UpdateFilteredTree();
+	return FolderTreeItem.SelectedDirectory;
 }
 
 void SFolderTreeWidget::OnSearchTextChanged(const FText& InText)
 {
-	FolderTreeState.TreeSearchText = InText;
-	UpdateFilteredTree();
+	if (!FolderTreeState.TreeSearchText.EqualTo(InText))
+	{
+		FolderTreeState.TreeSearchText = InText;
+		UpdateFilteredTree();
+	}
+}
+
+void SFolderTreeWidget::OnSearchTextCommitted(const FText& InText, ETextCommit::Type CommitInfo)
+{
+	switch (CommitInfo)
+	{
+	case ETextCommit::Default:
+		break;
+
+	case ETextCommit::OnEnter:
+		OnSearchTextChanged(InText);
+		break;
+
+	case ETextCommit::OnUserMovedFocus:
+		break;
+
+	case ETextCommit::OnCleared:
+		OnSearchTextChanged(InText);
+		break;
+
+	default:
+		break;
+	}
 }
 
 void SFolderTreeWidget::UpdateFilteredTree()
 {
 	if (FolderTreeState.TreeSearchText.IsEmpty())
 	{
-		FolderTreeState.TreeListView->SetTreeItemsSource(&FolderTreeData.TreeListItems);
+		FolderTreeState.TreeListView->SetTreeItemsSource(&FolderTreeItem.TreeListItems);
 		FolderTreeState.TreeListView->RebuildList();
 		return;
 	}
 
-	FolderTreeData.FilteredTreeListItems.Reset();
-	const FString FilterText = FolderTreeState.TreeSearchText.ToString();
-	for (const auto& Item : FolderTreeData.TreeListItems)
+	FolderTreeItem.FilteredTreeListItems.Reset();
+	const FString FilterText{ FolderTreeState.TreeSearchText.ToString() };
+
+	for (const auto& Item : FolderTreeItem.TreeListItems)
 	{
-		TSharedPtr<FAssetTreeFolderNode> FilteredRoot = FilterTreeItem(Item, FolderTreeState.TreeSearchText.ToString());
+		TSharedPtr<FAssetTreeFolderNode> FilteredRoot{ FilterTreeItem(Item, FilterText) };
 		if (FilteredRoot.IsValid())
 		{
-			FolderTreeData.FilteredTreeListItems.Add(FilteredRoot);
+			FolderTreeItem.FilteredTreeListItems.Add(FilteredRoot);
 		}
 	}
 
-	FolderTreeState.TreeListView->SetTreeItemsSource(&FolderTreeData.FilteredTreeListItems);
+	FolderTreeState.TreeListView->SetTreeItemsSource(&FolderTreeItem.FilteredTreeListItems);
 	FolderTreeState.TreeListView->RebuildList();
 
-	for (const auto& RootItem : FolderTreeData.FilteredTreeListItems)
+	for (const auto& RootItem : FolderTreeItem.FilteredTreeListItems)
 	{
 		ExpandAll(RootItem);
 	}
@@ -114,18 +138,21 @@ void SFolderTreeWidget::ExpandAll(const TSharedPtr<FAssetTreeFolderNode>& Node)
 
 TSharedPtr<FAssetTreeFolderNode> SFolderTreeWidget::FilterTreeItem(const TSharedPtr<FAssetTreeFolderNode>& Item, const FString& FilterText)
 {
-	if (!Item.IsValid()) return nullptr;
+	if (!Item.IsValid())
+	{
+		return nullptr;
+	}
 
-	bool bMatches = Item->FolderName.Contains(FilterText);
+	bool bMatches{ Item->FolderName.Contains(FilterText) };
 	TSharedPtr<FAssetTreeFolderNode> FilteredNode = MakeShareable(new FAssetTreeFolderNode(*Item));
 	FilteredNode->SubItems.Reset();
 
 	for (const auto& SubItem : Item->SubItems)
 	{
-		TSharedPtr<FAssetTreeFolderNode> FilteredChild = FilterTreeItem(SubItem, FilterText);
+		const auto FilteredChild = FilterTreeItem(SubItem, FilterText);
 		if (FilteredChild.IsValid())
 		{
-			FilteredNode->SubItems.Add(FilteredChild);
+			FilteredNode->SubItems.Emplace(FilteredChild);
 			bMatches = true;
 		}
 	}
@@ -139,17 +166,16 @@ TSharedRef<SHeaderRow> SFolderTreeWidget::GetTreeHeaderRow()
 		+ SHeaderRow::Column(TEXT("Path"))
 		.HAlignHeader(HAlign_Center)
 		.VAlignHeader(VAlign_Center)
-		.HeaderContentPadding(FMargin{ 5.0f })
+		.HeaderContentPadding(StaticCast<TOptional<FMargin>>(5.0f)) // StaticCast keeps the TOptional overload explicit for MSVC.
 		.FillWidth(0.4f)
 		[
-			SNew(STextBlock)
-			.Text(FText::FromString(TEXT("Path")))
+			SNew(STextBlock).Text(FText::FromString(TEXT("Path")))
 		];
 }
 
 TSharedRef<ITableRow> SFolderTreeWidget::OnTreeGenerateRow(TSharedPtr<FAssetTreeFolderNode> Item, const TSharedRef<STableViewBase>& OwnerTable)
 {
-	return SNew(SFolderItemTree, OwnerTable).Item(Item).HighlightText(FolderTreeState.TreeSearchText);
+	return SNew(SFolderItemTree, OwnerTable).Item(Item).HightlightText(FolderTreeState.TreeSearchText);
 }
 
 void SFolderTreeWidget::OnTreeGetChildren(TSharedPtr<FAssetTreeFolderNode> Item, TArray<TSharedPtr<FAssetTreeFolderNode>>& OutChildren)
@@ -175,14 +201,14 @@ void SFolderTreeWidget::OnTreeSelectionChanged(TSharedPtr<FAssetTreeFolderNode> 
 		return;
 	}
 
-	const auto& SelectedItems = FolderTreeState.TreeListView->GetSelectedItems();
+	const auto& SelectedItems{ FolderTreeState.TreeListView->GetSelectedItems() };
 
-	FolderTreeData.SelectedDirectory.Empty();
-	FolderTreeData.SelectedDirectory.Reserve(SelectedItems.Num());
+	FolderTreeItem.SelectedDirectory.Empty();
+	FolderTreeItem.SelectedDirectory.Reserve(SelectedItems.Num());
 
 	for (const auto& SelectedItem : SelectedItems)
 	{
-		FolderTreeData.SelectedDirectory = SelectedItem->FolderPath;
+		FolderTreeItem.SelectedDirectory = SelectedItem->FolderPath;
 	}
 }
 
@@ -198,7 +224,7 @@ void SFolderTreeWidget::OnTreeExpansionChanged(TSharedPtr<FAssetTreeFolderNode> 
 	FolderTreeState.TreeListView->RebuildList();
 }
 
-void SFolderTreeWidget::PopulatePluginSubFolders(TSharedPtr<FAssetTreeFolderNode> ParentItem)
+void SFolderTreeWidget::PopulatePluginSubFolders(const TSharedPtr<FAssetTreeFolderNode>& ParentItem)
 {
 	if (!ParentItem.IsValid())
 	{
@@ -209,6 +235,7 @@ void SFolderTreeWidget::PopulatePluginSubFolders(TSharedPtr<FAssetTreeFolderNode
 	FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	AssetRegistry.Get().GetSubPaths(ParentItem->FolderPath, SubPaths, true);
 
+	ParentItem->SubItems.Reserve(SubPaths.Num());
 	for (const auto& SubPath : SubPaths)
 	{
 		const FString FolderName = FPaths::GetCleanFilename(SubPath);
@@ -228,7 +255,7 @@ void SFolderTreeWidget::PopulatePluginSubFolders(TSharedPtr<FAssetTreeFolderNode
 
 void SFolderTreeWidget::UpdateFolderTree()
 {
-	if (!FolderTreeState.TreeListView.IsValid()) 
+	if (!FolderTreeState.TreeListView.IsValid())
 	{
 		return;
 	}
@@ -236,23 +263,22 @@ void SFolderTreeWidget::UpdateFolderTree()
 	TSet<TSharedPtr<FAssetTreeFolderNode>> CachedExpandedItems;
 	FolderTreeState.TreeListView->GetExpandedItems(CachedExpandedItems);
 
-	FolderTreeData.TreeListItems.Reset();
+	FolderTreeItem.TreeListItems.Reset();
 
-	/* Content FolderTree */
+	/* Content */
 	TSharedPtr<FAssetTreeFolderNode> RootContent = MakeShareable(new FAssetTreeFolderNode);
-	RootContent->FolderPath = DataAssetManager::GetPathRootToString();
+	RootContent->FolderPath = FDataAssetManagerPathUtils::GetRootPath();
 	RootContent->FolderName = TEXT("Content");
 	RootContent->bIsRoot = true;
-	RootContent->bIsDev = false;
 	RootContent->bIsExpanded = false;
 	RootContent->bIsVisible = true;
 	RootContent->Parent = nullptr;
 
 	FillTreeFromPath(RootContent, CachedExpandedItems);
 
-	FolderTreeData.TreeListItems.Add(RootContent);
+	FolderTreeItem.TreeListItems.Emplace(RootContent);
 
-	/* Plugins FolderTree */
+	/* Plugins */
 	TSharedPtr<FAssetTreeFolderNode> RootPlugins = MakeShareable(new FAssetTreeFolderNode);
 	RootPlugins->FolderPath = TEXT("/Plugins");
 	RootPlugins->FolderName = TEXT("Plugins");
@@ -261,12 +287,14 @@ void SFolderTreeWidget::UpdateFolderTree()
 	RootPlugins->bIsVisible = true;
 	RootPlugins->Parent = nullptr;
 
-	const TArray<TSharedRef<IPlugin>> EnabledPlugins = IPluginManager::Get().GetEnabledPlugins();
+	const TArray<TSharedRef<IPlugin>> EnabledPlugins{ IPluginManager::Get().GetEnabledPlugins() };
+	RootPlugins->SubItems.Reserve(EnabledPlugins.Num());
 	for (const auto& Plugin : EnabledPlugins)
 	{
+		/* shows only project plugins !!! */
 		if (Plugin->GetLoadedFrom() == EPluginLoadedFrom::Project)
 		{
-			FString PluginContentAbsPath = FPaths::Combine(Plugin->GetBaseDir(), TEXT("Content"));
+			FString PluginContentAbsPath{ FPaths::Combine(Plugin->GetBaseDir(), TEXT("Content")) };
 			FPaths::NormalizeDirectoryName(PluginContentAbsPath);
 			FString PluginGamePath;
 			if (!FPackageName::TryConvertFilenameToLongPackageName(PluginContentAbsPath, PluginGamePath))
@@ -282,43 +310,48 @@ void SFolderTreeWidget::UpdateFolderTree()
 			PluginItem->bIsVisible = true;
 			PluginItem->Parent = RootPlugins;
 
-			RootPlugins->SubItems.Add(PluginItem);
+			RootPlugins->SubItems.Emplace(PluginItem);
 
 			PopulatePluginSubFolders(PluginItem);
 		}
 	}
 	SortTreeItems(false);
 
-	FolderTreeData.TreeListItems.Emplace(RootPlugins);
+	FolderTreeItem.TreeListItems.Emplace(RootPlugins);
 	FolderTreeState.TreeListView->RebuildList();
 }
 
-void SFolderTreeWidget::FillTreeFromPath(TSharedPtr<FAssetTreeFolderNode> Item, const TSet<TSharedPtr<FAssetTreeFolderNode>>& CachedItems)
+void SFolderTreeWidget::FillTreeFromPath(const TSharedPtr<FAssetTreeFolderNode>& Item, const TSet<TSharedPtr<FAssetTreeFolderNode>>& CachedItems)
 {
-	if (!Item.IsValid()) 
+	if (!Item.IsValid())
 	{
 		return;
 	}
 
-	TArray<FString> SubPaths;
-	FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	TArray<FString> SubPaths{};
+	const FAssetRegistryModule& AssetRegistry{ FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry") };
 	AssetRegistry.Get().GetSubPaths(Item->FolderPath, SubPaths, false);
 
+	Item->SubItems.Reserve(SubPaths.Num());
+	const FString GetPathDevToStr{ FDataAssetManagerPathUtils::GetDevelopersPath() };
 	for (const auto& SubPath : SubPaths)
 	{
-		if (DataAssetManager::FolderIsExternal(SubPath)) continue;
+		if (FDataAssetManagerPathUtils::IsExternalFolder(SubPath))
+		{
+			continue;
+		}
 
 		const TSharedPtr<FAssetTreeFolderNode> SubItem = MakeShareable(new FAssetTreeFolderNode);
 		SubItem->FolderPath = SubPath;
 		SubItem->FolderName = FPaths::GetPathLeaf(SubPath);
-		SubItem->bIsDev = SubItem->FolderPath.StartsWith(DataAssetManager::GetPathDevToString());
+		SubItem->bIsDev = SubItem->FolderPath.StartsWith(GetPathDevToStr);
 		SubItem->bIsRoot = false;
-		SubItem->bIsEmpty = DataAssetManager::FolderIsEmpty(SubPath);
+		SubItem->bIsEmpty = FDataAssetManagerPathUtils::IsFolderEmpty(SubPath);
 		SubItem->Parent = Item;
 		SubItem->bIsExpanded = TreeItemIsExpanded(SubItem, CachedItems);
 		SubItem->bIsVisible = true;
 
-		Item->SubItems.Add(SubItem);
+		Item->SubItems.Emplace(SubItem);
 
 		FillTreeFromPath(SubItem, CachedItems);
 	}
@@ -357,9 +390,9 @@ bool SFolderTreeWidget::TreeItemIsExpanded(const TSharedPtr<FAssetTreeFolderNode
 
 bool SFolderTreeWidget::TreeItemContainsSearchText(const TSharedPtr<FAssetTreeFolderNode>& Item) const
 {
-	TArray<FString> SubPaths;
+	TArray<FString> SubPaths{};
 
-	FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	const FAssetRegistryModule& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 	AssetRegistry.Get().GetSubPaths(Item->FolderPath, SubPaths, true);
 	for (const auto& Path : SubPaths)
 	{
@@ -368,7 +401,6 @@ bool SFolderTreeWidget::TreeItemContainsSearchText(const TSharedPtr<FAssetTreeFo
 			return true;
 		}
 	}
-
 	return false;
 }
 
@@ -381,13 +413,16 @@ void SFolderTreeWidget::SortTreeItems(const bool UpdateSortingOrder)
 				SortMode = SortMode == EColumnSortMode::Ascending ? EColumnSortMode::Descending : EColumnSortMode::Ascending;
 			}
 
-			TArray<TSharedPtr<FAssetTreeFolderNode>> Stack;
-			Stack.Push(FolderTreeData.RootItem);
+			TArray<TSharedPtr<FAssetTreeFolderNode>> Stack{};
+			Stack.Push(FolderTreeItem.RootItem);
 
 			while (Stack.Num() > 0)
 			{
-				const auto& CurrentItem = Stack.Pop(EAllowShrinking::No);
-				if (!CurrentItem.IsValid()) continue;
+				const auto& CurrentItem{ Stack.Pop(EAllowShrinking::No) };
+				if (!CurrentItem.IsValid())
+				{
+					continue;
+				}
 
 				TArray<TSharedPtr<FAssetTreeFolderNode>>& SubItems = CurrentItem->SubItems;
 				SubItems.Sort(SortFunc);
@@ -398,10 +433,11 @@ void SFolderTreeWidget::SortTreeItems(const bool UpdateSortingOrder)
 
 	if (FolderTreeState.LastSortedColumn.IsEqual(TEXT("Path")))
 	{
-		SortTreeItems(FolderTreeState.ColumnPathSortMode, [&](const TSharedPtr<FAssetTreeFolderNode>& Item1, const TSharedPtr<FAssetTreeFolderNode>& Item2)
+		SortTreeItems(FolderTreeState.ColumnPathSortMode,
+			[&](const TSharedPtr<FAssetTreeFolderNode>& Item1, const TSharedPtr<FAssetTreeFolderNode>& Item2)
 			{
-				return FolderTreeState.ColumnPathSortMode == EColumnSortMode::Ascending ? Item1->FolderPath < Item2->FolderPath : Item1->FolderPath > Item2->FolderPath;
+				return FolderTreeState.ColumnPathSortMode == EColumnSortMode::Ascending ? Item1->FolderPath < Item2->FolderPath :
+					Item1->FolderPath > Item2->FolderPath;
 			});
 	}
 }
-

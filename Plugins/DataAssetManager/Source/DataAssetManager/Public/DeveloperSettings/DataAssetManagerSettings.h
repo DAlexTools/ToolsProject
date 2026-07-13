@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #pragma once
 
@@ -6,46 +6,58 @@
 #include "Engine/DeveloperSettings.h"
 #include "DataAssetManagerSettings.generated.h"
 
-
 /**
- * Settings for the Data Asset Manager.
- *
- * Settings are saved in the configuration file, and any changes require the module or editor to be reloaded.
+ * @brief Configurable editor settings for the Data Asset Manager plugin.
  */
 UCLASS(Config = Engine, defaultconfig)
 class DATAASSETMANAGER_API UDataAssetManagerSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
-	
+
 public:
+	/**
+	 * @brief Initializes default plugin settings.
+	 */
 	UDataAssetManagerSettings();
 
 #if WITH_EDITOR
 	/**
-	 * @brief Override method to get the section text for settings in the editor.
-	 *
-	 * This method allows setting a custom text for the settings section in the editor UI.
-	 *
-	 * @return The text that will be displayed in the UI for the settings section.
+	 * @brief Returns the display text for the settings section in the editor.
+	 * @return Localized section text.
 	 */
 	virtual FText GetSectionText() const override;
 #endif
 
-	/** Default directory path for asset creation. */
-	UPROPERTY(Config, EditAnywhere, Category = "Settings", meta = (RelativePath, LongPackageName))
-	FDirectoryPath DefaultAssetCreationDirectory = { TEXT("/Game") };
-
-	/** List of directories to scan for assets. */
+	/** @brief Long package paths scanned for Data Asset instances. */
 	UPROPERTY(Config, EditAnywhere, Category = "Settings", meta = (RelativePath, LongPackageName))
 	TArray<FDirectoryPath> ScannedAssetDirectories = { { TEXT("/Game") } };
 
-	/** List of asset types to exclude from scanning. */
+	/** @brief Data Asset classes excluded from scan results. */
 	UPROPERTY(Config, EditAnywhere, Category = "Settings", meta = (AllowedClasses = "/Script/Engine.DataAsset"))
 	TArray<TSubclassOf<UDataAsset>> ExcludedScanAssetTypes;
 
-	/** URL to the online documentation. */
+	/** @brief URL opened by the Documentation menu entry. */
 	UPROPERTY(Config, EditAnywhere, Category = "Settings")
-	FString DocumentationURL; 
+	FString DocumentationURL;
+
+	/** @brief Fallback minimum value used by numeric randomization for integer properties without ClampMin metadata. */
+	UPROPERTY(Config, EditAnywhere, Category = "Settings|Randomization")
+	int32 RandomIntegerClampMin = 0;
+
+	/** @brief Fallback maximum value used by numeric randomization for integer properties without ClampMax metadata. */
+	UPROPERTY(Config, EditAnywhere, Category = "Settings|Randomization")
+	int32 RandomIntegerClampMax = 100;
+
+	/** @brief Fallback minimum value used by numeric randomization for floating point properties without ClampMin metadata. */
+	UPROPERTY(Config, EditAnywhere, Category = "Settings|Randomization")
+	float RandomFloatClampMin = 0.0f;
+
+	/** @brief Fallback maximum value used by numeric randomization for floating point properties without ClampMax metadata. */
+	UPROPERTY(Config, EditAnywhere, Category = "Settings|Randomization")
+	float RandomFloatClampMax = 1.0f;
+
+	/** @brief Root Object Customization title color */
+	UPROPERTY(Config, EditAnywhere, Category = "Settings|Customization")
+	FLinearColor RootCustomColor = FLinearColor(0.2f, 0.4f, 0.8f, 1.f);
+
 };
-
-

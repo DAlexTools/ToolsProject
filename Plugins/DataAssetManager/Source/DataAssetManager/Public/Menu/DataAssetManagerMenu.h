@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #pragma once
 
@@ -6,62 +6,50 @@
 #include "IDataAssetManagerInterface.h"
 
 /**
- * Static menu builder class for Data Asset Manager UI.
- *
- * Provides methods to populate different menu sections with manager-specific actions.
- * All methods are static as they operate on the provided IDataAssetManagerInterface.
+ * @brief Builds the top-level Data Asset Manager menus.
  */
-class FDataAssetManagerMenu
+class FDataAssetManagerMenu final
 {
 public:
 	/**
-	 * Populates the File menu section with asset management operations.
-	 *
-	 * @param MenuBuilder Reference to UE's menu construction system
-	 * @param Manager     Active data asset manager instance
+	 * @brief Populates the File menu section.
+	 * @param MenuBuilder Menu builder receiving entries.
+	 * @param ManagerInterface Manager implementation invoked by menu actions.
 	 */
 	static void FillFileMenu(FMenuBuilder& MenuBuilder, TSharedRef<IDataAssetManagerInterface> ManagerInterface);
 
 	/**
-	 * Populates the Assets menu section with asset-specific actions.
-	 *
-	 * @param MenuBuilder Reference to UE's menu construction system
-	 * @param Manager     Active data asset manager instance
+	 * @brief Populates the Asset menu section.
+	 * @param MenuBuilder Menu builder receiving entries.
+	 * @param ManagerInterface Manager implementation invoked by menu actions.
 	 */
 	static void FillAssetsMenu(FMenuBuilder& MenuBuilder, TSharedRef<IDataAssetManagerInterface> ManagerInterface);
 
 	/**
-	 * Populates the Settings menu section with configuration options.
-	 *
-	 * @param MenuBuilder Reference to UE's menu construction system
-	 * @param Manager     Active data asset manager instance
+	 * @brief Populates the Settings menu section.
+	 * @param MenuBuilder Menu builder receiving entries.
+	 * @param ManagerInterface Manager implementation invoked by menu actions.
 	 */
 	static void FillSettingsMenu(FMenuBuilder& MenuBuilder, TSharedRef<IDataAssetManagerInterface> ManagerInterface);
 
 	/**
-	 * Populates the Help menu section with documentation and support actions.
-	 *
-	 * @param MenuBuilder Reference to UE's menu construction system
-	 * @param Manager     Active data asset manager instance
+	 * @brief Populates the Help menu section.
+	 * @param MenuBuilder Menu builder receiving entries.
+	 * @param ManagerInterface Manager implementation invoked by menu actions.
 	 */
 	static void FillHelpMenu(FMenuBuilder& MenuBuilder, TSharedRef<IDataAssetManagerInterface> ManagerInterface);
-
 };
 
 /**
- * Factory class for creating the Data Asset Manager menu bar widget.
- *
- * Handles the construction of the complete menu bar structure
- * and connects it to manager functionality.
+ * @brief Factory for creating the complete Data Asset Manager menu bar widget.
  */
-class FDataAssetManagerMenuFactory
+class FDataAssetManagerMenuFactory final
 {
 public:
 	/**
-	 * Creates and returns a fully configured menu bar widget.
-	 *
-	 * @param Manager Active data asset manager instance
-	 * @return Shared reference to the constructed menu bar widget
+	 * @brief Creates the menu bar bound to a manager interface implementation.
+	 * @param ManagerInterface Manager implementation invoked by menu actions.
+	 * @return Menu bar widget.
 	 */
-	static TSharedRef<SWidget> CreateMenuBar(TSharedRef<IDataAssetManagerInterface> ManagerInterface);
+	[[nodiscard]] static TSharedRef<SWidget> CreateMenuBar(TSharedRef<IDataAssetManagerInterface> ManagerInterface);
 };

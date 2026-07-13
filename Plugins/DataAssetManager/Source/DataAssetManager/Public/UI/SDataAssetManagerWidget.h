@@ -1,536 +1,534 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Editor/PropertyEditor/Public/IDetailsView.h"
-#include "SAssetSearchBox.h"
 #include "Menu/IDataAssetManagerInterface.h"
 #include "DataAssetManagerTypes.h"
+#include "Types/DataAssetDiffTypes.h"
+#include "Types/DataAssetReferenceTypes.h"
 
 class UDataAssetManagerSettings;
+class UPackage;
 class SLayeredImage;
+class SFilterSearchBox;
 
+/**
+ * @brief Main editor widget for browsing, filtering, editing, and managing Data Asset instances.
+ */
 class DATAASSETMANAGER_API SDataAssetManagerWidget : public SCompoundWidget, public IDataAssetManagerInterface
 {
+	/** @brief Slate argument type used to construct the widget. */
 	SLATE_BEGIN_ARGS(SDataAssetManagerWidget) {}
 	SLATE_END_ARGS()
+
 public:
+	/**
+	 * @brief Constructs the widget and builds its Slate layout.
+	 * @param InArgs Slate construction arguments.
+	 */
 	void Construct(const FArguments& InArgs);
 
+	/**
+	 * @brief Releases widget resources and unregisters editor delegates.
+	 */
 	~SDataAssetManagerWidget();
 
-protected:
-#pragma region IDataAssetManagerInterface
-	/////////////////////////////////////////////////////////////////////////////
 	/**
-	 * Interface for managing Data Assets in the Unreal Editor.
-	 *
-	 * Provides core operations for:
-	 * - Asset lifecycle (create/save/validate)
-	 * - Editor integration (content browser sync, reference analysis)
-	 * - Utility features (clipboard, documentation, plugin control)
-	 *
-	 * Implemented by the main Data Asset Manager system to expose functionality
-	 * to both UI widgets and other editor modules.
+	 * @brief Selects the first available asset when the asset list is not empty.
 	 */
-	 /////////////////////////////////////////////////////////////////////////////
+	void SelectFirstAssetIfAvailable();
+
+protected:
+	/** @brief Starts creation of a new Data Asset in the currently selected folder. */
 	virtual void CreateNewDataAsset() override;
+
+	/** @brief Opens the selected Data Asset in the editor. */
 	virtual void OpenSelectedDataAssetInEditor() override;
+
+	/** @brief Toggles visibility of the Data Asset list panel. */
 	virtual void ToggleDataAssetListVisibility() override;
+
+	/** @brief Opens the configured documentation URL. */
 	virtual void ShowDocumentation() override;
+
+	/** @brief Saves the selected Data Asset packages. */
 	virtual void SaveDataAsset() override;
+
+	/** @brief Saves all dirty Data Asset packages. */
 	virtual void SaveAllData() override;
+
+	/** @brief Syncs the Content Browser selection to the selected Data Assets. */
 	virtual void SyncContentBrowserToSelectedAsset() override;
-	virtual void CopyToClipboard(bool bCopyPaths) override;
-	virtual void OpenReferenceViewer() override;
-	virtual void OpenSizeMap() override;
-	virtual void OpenAuditAsset() override;
-	virtual void OpenPluginSettings() override;
-	virtual void ShowSourceControlDialog() override;
-	virtual void RestartPlugin() override;
-	virtual void OpenMessageLogWindow() override;
-	virtual void OpenOutputLogWindow() override;
-	virtual bool CanRename() const override;
-	virtual void FocusOnSelectedAsset() override;
-	virtual void DeleteDataAsset() override;
-	virtual void ShowAssetMetaData() override;
-#pragma endregion IDataAssetManagerInterface	
 
-
-private:
-
-	void RefreshAssetList();
-
-	bool IsDetailsViewEmpty() const;
-
-	TTuple<TArray<FAssetData>, TArray<FAssetData>> CategorizeAssets(const TArray<TSharedPtr<FAssetData>>& SelectedItems);
-
-	void AddColumnMenuEntry(FMenuBuilder& MenuBuilder, FText Label, FText Tooltip, bool* ColumnFlag);
-
-	bool IsColumnVisible(bool* bColumnPtr) const;
-
-	void ToggleColumn(bool* bColumnPtr);
 	/**
-	 * Registers an editable text widget for the specified asset.
-	 *
-	 * Associates the given SEditableText widget with an asset for later reference.
-	 * This allows easy retrieval and updates of the text input corresponding to the asset.
-	 *
-	 * @param AssetData     A shared pointer to the asset data associated with the widget.
-	 * @param EditableText  A shared reference to the editable text widget used for this asset.
+	 * @brief Copies selected asset references or file paths to the clipboard.
+	 * @param bCopyPaths true to copy disk paths, false to copy object references.
+	 */
+	virtual void CopyToClipboard(bool bCopyPaths) override;
+
+	/** @brief Opens Reference Viewer for the selected Data Assets. */
+	virtual void OpenReferenceViewer() override;
+
+	/** @brief Opens the reference inspector for the selected Data Asset. */
+	virtual void OpenReferenceInspector() override;
+
+	/** @brief Opens Data Asset Diff for two selected Data Assets. */
+	virtual void OpenDataAssetDiff() override;
+
+	/**
+	 * @brief Checks whether exactly two Data Assets are selected for diff.
+	 * @return true when the selection can open the diff command.
+	 */
+	virtual bool CanOpenDataAssetDiff() const override;
+
+	/** @brief Opens Size Map for the selected Data Assets. */
+	virtual void OpenSizeMap() override;
+
+	/** @brief Opens Asset Audit for the selected Data Assets. */
+	virtual void OpenAuditAsset() override;
+
+	/** @brief Opens Data Asset Manager settings in the editor settings UI. */
+	virtual void OpenPluginSettings() override;
+
+	/** @brief Opens the source control dialog for the selected Data Assets. */
+	virtual void ShowSourceControlDialog() override;
+
+	/** @brief Restarts the plugin widget through the module restart workflow. */
+	virtual void RestartPlugin() override;
+
+	/** @brief Opens the Message Log window. */
+	virtual void OpenMessageLogWindow() override;
+
+	/** @brief Opens the Output Log window. */
+	virtual void OpenOutputLogWindow() override;
+
+	/**
+	 * @brief Checks whether inline rename is currently allowed.
+	 * @return true when the current selection can be renamed.
+	 */
+	virtual bool CanRename() const override;
+
+	/** @brief Focuses the editable text widget for the selected asset. */
+	virtual void FocusOnSelectedAsset() override;
+
+	/** @brief Deletes the selected Data Assets. */
+	virtual void DeleteDataAsset() override;
+
+	/** @brief Shows metadata for the selected Data Asset. */
+	virtual void ShowAssetMetaData() override;
+
+protected:
+	/** @brief Opens the current selection in the Property Matrix editor. */
+	void OpenSelectionInPropertyMatrix();
+
+	/**
+	 * @brief Builds one reference inspector list section.
+	 * @param Title Section title.
+	 * @param EmptyText Text shown when the section has no entries.
+	 * @param InspectionResult Shared inspection result that owns the list items.
+	 * @param bReferencedBy true for the referencer list, false for the dependency list.
+	 * @return Slate widget for the section.
+	 */
+	TSharedRef<SWidget> BuildReferenceListSection(
+		FText Title,
+		FText EmptyText,
+		TSharedRef<FDataAssetReferenceInspectionResult> InspectionResult,
+		bool bReferencedBy);
+
+	/**
+	 * @brief Generates a reference inspector row.
+	 * @param Entry Reference entry represented by the row.
+	 * @param OwnerTable Owning table view.
+	 * @return New row widget.
+	 */
+	TSharedRef<ITableRow> GenerateReferenceEntryRow(TSharedPtr<FDataAssetReferenceEntry> Entry, const TSharedRef<STableViewBase>& OwnerTable);
+
+	/** @brief Syncs a reference inspector entry to the Content Browser. */
+	void SyncReferenceEntryInContentBrowser(TSharedPtr<FDataAssetReferenceEntry> Entry) const;
+
+	/** @brief Opens a reference inspector entry in its editor when possible. */
+	void OpenReferenceEntryInEditor(TSharedPtr<FDataAssetReferenceEntry> Entry) const;
+
+	/**
+	 * @brief Generates a Data Asset diff row.
+	 * @param Entry Diff entry represented by the row.
+	 * @param OwnerTable Owning table view.
+	 * @param DiffResult Shared diff result that owns assets and row entries.
+	 * @param RefreshDiff Callback that recalculates and refreshes the diff list.
+	 * @return New row widget.
+	 */
+	TSharedRef<ITableRow> GenerateDataAssetDiffRow(
+		TSharedPtr<FDataAssetDiffEntry> Entry,
+		const TSharedRef<STableViewBase>& OwnerTable,
+		TSharedRef<FDataAssetDiffResult> DiffResult,
+		TSharedRef<TFunction<void()>> RefreshDiff);
+
+	/**
+	 * @brief Copies one diff value from one side to the other and refreshes the window.
+	 * @param Entry Diff entry whose property should be copied.
+	 * @param DiffResult Shared diff result containing left and right assets.
+	 * @param bLeftToRight true copies left value into right asset, false copies right value into left asset.
+	 * @param RefreshDiff Callback that recalculates the diff after copy.
+	 */
+	void CopyDataAssetDiffValue(
+		TSharedPtr<FDataAssetDiffEntry> Entry,
+		TSharedRef<FDataAssetDiffResult> DiffResult,
+		bool bLeftToRight,
+		TSharedRef<TFunction<void()>> RefreshDiff);
+
+	/**
+	 * @brief Checks whether the selected assets can be opened in Property Matrix.
+	 * @return true when at least one selected asset can be edited in Property Matrix.
+	 */
+	bool CanOpenSelectedAssetsInPropertyEditor() const;
+
+	/** @brief Duplicates all selected Data Assets. */
+	void DuplicateSelectedDataAssets();
+
+	/** @brief Prompts for a destination and moves selected Data Assets. */
+	void MoveSelectedDataAssets();
+
+	/**
+	 * @brief Moves selected Data Assets to the specified package path.
+	 * @param DestinationPath Destination long package path.
+	 */
+	void MoveSelectedDataAssetsToPath(const FString& DestinationPath);
+
+	/** @brief Runs validation for selected Data Assets. */
+	void ValidateSelectedDataAssets();
+
+	/** @brief Runs validation for all loaded Data Assets. */
+	void ValidateAllDataAssets();
+
+	/**
+	 * @brief Applies validation states and updates the invalid-assets filter.
+	 * @param ValidationResults Validation states produced by the asset service.
+	 */
+	void ApplyValidationResults(FDataAssetValidationResults&& ValidationResults);
+
+	/**
+	 * @brief Returns cached validation state for a table row asset.
+	 * @param AssetData Asset data represented by the row.
+	 * @return Validation state, or nullptr when the asset has not been validated yet.
+	 */
+	const FDataAssetValidationState* GetValidationStateForAsset(TSharedPtr<FAssetData> AssetData) const;
+
+	/**
+	 * @brief Checks whether the asset list has an active selection.
+	 * @return true when one or more assets are selected.
+	 */
+	bool HasSelectedAssets() const;
+
+	/**
+	 * @brief Registers an editable text widget for inline asset rename.
+	 * @param AssetData Asset data associated with the editable text widget.
+	 * @param EditableText Editable text widget used for rename focus.
 	 */
 	void RegisterEditableText(TSharedPtr<FAssetData> AssetData, TSharedRef<SEditableText> EditableText);
 
 	/**
-	 * Handles asset renaming via text input commit.
-	 *
-	 * Triggered when the user finishes editing the asset name in the UI.
-	 * This method updates the asset with the new name based on the input text and commit type.
-	 *
-	 * @param AssetData     A shared pointer to the asset data being renamed.
-	 * @param InText        The new text entered by the user.
-	 * @param CommitMethod  The method used to commit the text (e.g., Enter, Focus loss).
+	 * @brief Handles committed inline asset name edits.
+	 * @param AssetData Asset data being renamed.
+	 * @param InText New asset name text.
+	 * @param CommitMethod Commit action reported by Slate.
 	 */
 	void HandleAssetRename(TSharedPtr<FAssetData> AssetData, const FText& InText, ETextCommit::Type CommitMethod);
 
 	/**
-	 * Handles double-click events on an asset row.
-	 *
-	 * Typically used to open the asset or show its details in the editor when double-clicked.
-	 *
-	 * @param InGeometry    The geometry of the widget receiving the event.
-	 * @param MouseEvent    The mouse event containing double-click data.
+	 * @brief Handles double-clicks on an asset list row.
+	 * @param InGeometry Row geometry at the time of the event.
+	 * @param MouseEvent Mouse event that triggered the action.
 	 */
 	void HandleAssetDoubleClick(const FGeometry& InGeometry, const FPointerEvent& MouseEvent);
 
 	/**
-	 * Creates a context menu for the selected data asset.
-	 *
-	 * This method generates a context menu that appears when the user interacts with an asset in the UI.
-	 *
-	 * @param InGeometry The geometry for the context menu.
-	 * @param MouseEvent Information about the mouse event triggering the context menu.
-	 * @return A reply object representing the result of the context menu action.
+	 * @brief Opens the context menu for a Data Asset row.
+	 * @param InGeometry Row geometry used for menu placement.
+	 * @param MouseEvent Mouse event that requested the menu.
 	 */
 	void CreateContextMenuFromDataAsset(const FGeometry& InGeometry, const FPointerEvent& MouseEvent);
 
 	/**
-	 * Handles mouse button down events on a row widget.
-	 *
-	 * Called when the user presses a mouse button while hovering over a specific row.
-	 * This can be used to trigger row selection, drag detection, or context menu logic.
-	 *
-	 * @param InGeometry     The geometry of the widget receiving the event.
-	 * @param MouseEvent     Describes the mouse event, including button, position, and modifiers.
-	 * @return               An FReply indicating how the event was handled.
+	 * @brief Handles mouse button presses on an asset list row.
+	 * @param InGeometry Row geometry at the time of the event.
+	 * @param MouseEvent Mouse event to process.
+	 * @return Reply describing how the event was handled.
 	 */
 	FReply HandleRowMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& MouseEvent);
 
-	/**
-	 * Initializes the Asset Registry.
-	 *
-	 * This method sets up the asset registry to manage the assets in the project. It is typically called during the
-	 * initialization phase of the widget to ensure the registry is available for asset management operations.
-	 */
+	/** @brief Subscribes the widget to Asset Registry change events. */
 	void SubscribeToAssetRegistryEvent();
 
-	/**
-	 * Initializes the font information for rendering text.
-	 *
-	 * This method configures the font style, size, and other properties required for rendering text within the
-	 * user interface.
-	 */
+	/** @brief Initializes font data used by text widgets. */
 	void InitializeTextFontInfo();
 
-	/**
-	 * Creates the Details View for asset information.
-	 *
-	 * This method sets up the details view widget that will display detailed information about a selected asset.
-	 */
+	/** @brief Creates the details view used to inspect selected assets. */
 	void CreateDetailsView();
 
 	/**
-	 * Creates and configures parameters for Details View panel.
-	 *
-	 * @return Configured FDetailsViewArgs structure with default settings
-	 *         for asset property display in this widget.
-	 *
-	 * @note Sets common view options like bAllowSearch, bHideSelectionTip, etc.
-	 * @see SDetailsView, IDetailsView
+	 * @brief Creates configuration arguments for the details view.
+	 * @return Details view argument structure.
 	 */
 	FDetailsViewArgs CreateDetailsViewArgs() const;
 
 	/**
-	 * Loads the data assets based on the plugin settings.
-	 *
-	 * This method retrieves and loads data assets according to the configuration specified in the plugin settings.
-	 *
-	 * @param PluginSettings The settings used to load the data assets.
+	 * @brief Loads Data Assets using plugin scan settings.
+	 * @param PluginSettings Plugin settings that define scan paths and exclusions.
 	 */
 	void LoadDataAssets(const UDataAssetManagerSettings* PluginSettings);
 
-	/**
-	 * Updates the list of assets based on the applied filter.
-	 *
-	 * This method filters the assets according to the current filter and updates the displayed list of assets.
-	 */
+	/** @brief Rebuilds the filtered asset list from the current filters and search text. */
 	void UpdateFilteredAssetList();
 
 	/**
-	 * Called when an asset is selected in the asset list.
-	 *
-	 * This method handles the selection of an asset in the asset list and can trigger updates to other UI components
-	 * based on the selection.
-	 *
-	 * @param SelectedItem The selected asset data.
-	 * @param SelectInfo Information about the selection.
+	 * @brief Handles asset selection changes in the list view.
+	 * @param SelectedItem Newly selected asset data.
+	 * @param SelectInfo Selection cause reported by Slate.
 	 */
 	void OnAssetSelected(TSharedPtr<FAssetData> SelectedItem, ESelectInfo::Type SelectInfo);
 
 	/**
-	 * Opens the details panel for the selected asset.
-	 *
-	 * This method opens a detailed view for the selected asset, allowing the user to inspect and interact with
-	 * asset-specific properties.
-	 *
-	 * @param SelectedItem The selected asset data.
+	 * @brief Opens the details view for the selected asset.
+	 * @param SelectedItem Asset data to display.
 	 */
 	void OpenDetailViewPanelForAsset(TSharedPtr<FAssetData> SelectedItem);
 
 	/**
-	 * Called when the search text is changed in the search box.
-	 *
-	 * This method updates the asset list based on the new search query.
-	 *
-	 * @param InText The updated search query text.
+	 * @brief Handles changes in the asset search box.
+	 * @param InText Current search text.
 	 */
 	void OnSearchTextChanged(const FText& InText);
 
 	/**
-	 * Generates a row for the asset list view.
-	 *
-	 * This method creates a new row for the asset list view, representing an individual asset.
-	 *
-	 * @param Item The asset data for the row.
-	 * @param OwnerSTable The table view that owns this row.
-	 * @return A reference to the generated table row widget.
+	 * @brief Generates a table row widget for an asset list item.
+	 * @param Item Asset data displayed by the row.
+	 * @param OwnerSTable Table view that owns the row.
+	 * @return New table row widget.
 	 */
 	TSharedRef<ITableRow> GenerateAssetListRow(TSharedPtr<FAssetData> Item, const TSharedRef<STableViewBase>& OwnerSTable);
 
 	/**
-	 * Initializes the asset type combo box.
-	 *
-	 * This method populates and sets up the combo box for selecting asset types from the filtered list of assets.
-	 *
-	 * @param AssetDataList The list of assets to populate the combo box.
+	 * @brief Initializes the asset type combo box from loaded assets.
+	 * @param AssetDataList Asset data used to populate type entries.
 	 */
 	void InitializeAssetTypeComboBox(TArray<TSharedPtr<FAssetData>> AssetDataList);
 
 	/**
-	 * Saves all data assets.
-	 *
-	 * This method saves all the data assets, ensuring any modifications are persisted to storage.
-	 *
-	 * @return A boolean indicating whether the save operation was successful.
+	 * @brief Saves all dirty Data Asset packages.
+	 * @return true when every requested save succeeds.
 	 */
 	bool SaveAllDataAsset();
 
 	/**
-	 * Processes the asset data and applies a specified function.
-	 *
-	 * This method processes the provided asset data using the specified function for each asset.
-	 *
-	 * @param RefAssetData The asset data to be processed.
-	 * @param ProcessFunction A function that defines how the asset data should be processed.
+	 * @brief Resolves asset identifiers and invokes a processing callback.
+	 * @param RefAssetData Assets to resolve into identifiers.
+	 * @param ProcessFunction Callback invoked with resolved identifiers.
 	 */
 	void ProcessAssetData(const TArray<FAssetData>& RefAssetData, TFunction<void(const TArray<FAssetIdentifier>&)> ProcessFunction);
 
+	/** @brief Refreshes loaded assets and updates the visible list. */
+	void RefreshAssetList();
+
 	/**
-	 * Called when a new asset is added to the registry.
-	 *
-	 * This method updates the internal asset list when a new asset is added to the project.
-	 *
-	 * @param NewAssetData The newly added asset data.
+	 * @brief Handles Asset Registry notifications for newly added assets.
+	 * @param NewAssetData Asset data for the added asset.
 	 */
 	void OnAssetAdded(const FAssetData& NewAssetData);
 
 	/**
-	 * Called when an asset is removed from the registry.
-	 *
-	 * This method updates the internal asset list when an asset is removed from the project.
-	 *
-	 * @param AssetToRemoved The asset data for the asset being removed.
+	 * @brief Handles Asset Registry notifications for removed assets.
+	 * @param AssetToRemoved Asset data for the removed asset.
 	 */
 	void OnAssetRemoved(const FAssetData& AssetToRemoved);
 
 	/**
-	 * Called when an asset is renamed in the registry.
-	 *
-	 * This method updates the asset list when an asset's name is changed.
-	 *
-	 * @param NewAssetData The renamed asset data.
-	 * @param Name The new name of the asset.
+	 * @brief Handles Asset Registry notifications for renamed assets.
+	 * @param NewAssetData Asset data after rename.
+	 * @param Name Previous object path or name reported by the registry.
 	 */
 	void OnAssetRenamed(const FAssetData& NewAssetData, const FString& Name);
 
 	/**
-	 * Creates a filter image for asset filtering.
-	 *
-	 * This method generates an image used for filtering assets in the UI.
-	 *
-	 * @return A shared pointer to the filter image widget.
+	 * @brief Handles dirty state changes for asset packages.
+	 * @param DirtyPackage Package whose dirty state changed.
+	 */
+	void OnPackageDirtyStateChanged(UPackage* DirtyPackage);
+
+	/**
+	 * @brief Creates the icon widget used by the filter controls.
+	 * @return Layered image widget for filter state.
 	 */
 	TSharedPtr<SLayeredImage> CreateFilterImage();
 
 	/**
-	 * Determines visibility state of the search box.
-	 *
-	 * Typically bound to UI visibility properties to:
-	 * - Show/hide based on window size
-	 * - Temporarily hide during operations
-	 * - Respect user preferences
-	 *
-	 * @return EVisibility::Visible/Collapsed/Hidden based on current logic
+	 * @brief Returns the current selection mode for the asset list.
+	 * @return Selection mode used by the list view.
+	 */
+	ESelectionMode::Type GetAssetListSelectionMode() const;
+
+	/**
+	 * @brief Returns search box visibility based on widget state.
+	 * @return Visibility value for the search box.
 	 */
 	EVisibility GetVisibilitySearchBox() const;
 
 	/**
-	 * Callback for when an item in the combo box is clicked.
-	 *
-	 * This method is triggered when an item in the combo box is selected, and it can be used to handle the selected
-	 * asset type.
-	 *
-	 * @param SourceItem The selected item from the combo box.
-	 * @return A reply object representing the result of the item click.
+	 * @brief Handles selecting an item in the asset type combo box.
+	 * @param SourceItem Selected combo-box entry.
+	 * @return Reply produced by the selection action.
 	 */
 	FReply OnItemClicked(TSharedPtr<FString> SourceItem);
 
 	/**
-	 * Creates the content for the combo button.
-	 *
-	 * This method generates the widget content displayed in the combo button.
-	 *
-	 * @return A reference to the widget that will be used as content for the combo button.
+	 * @brief Creates popup content for the asset type combo button.
+	 * @return Combo-button content widget.
 	 */
 	TSharedRef<SWidget> CreateComboButtonContent();
 
 	/**
-	 * Adds a toggleable menu entry to the given menu builder for a filter.
-	 *
-	 * This function creates a menu item that can be checked or unchecked. When the item
-	 * is clicked, it adds or removes the filter name from the specified active filter set
-	 * and calls the provided update function to refresh any dependent UI or data.
-	 *
-	 * @param MenuBuilder   Reference to the FMenuBuilder used to construct the menu.
-	 * @param FilterName    The name of the filter represented by this menu entry.
-	 * @param ActiveFilters Reference to the set of currently active filters.
-	 * @param UpdateFunc    Callback function invoked after toggling the filter to update UI or data.
+	 * @brief Adds a toggleable filter entry to a menu.
+	 * @param MenuBuilder Menu builder that receives the entry.
+	 * @param FilterName Filter key shown by the entry.
+	 * @param ActiveFilters Active filter set updated by the entry.
+	 * @param UpdateFunc Callback invoked after filter state changes.
 	 */
 	void AddToggleFilterMenuEntry(FMenuBuilder& MenuBuilder, const FString& FilterName, TSet<FString>& ActiveFilters, TFunction<void()> UpdateFunc);
 
 	/**
-	 * Updates the content of the combo button.
-	 *
-	 * This method updates the content of the combo button, typically after a change in asset type or filter.
-	 */
-	void UpdateComboButtonContent();
-
-	/**
-	 * Retrieves the list of selected assets.
-	 *
-	 * This method returns the currently selected items from the asset list.
-	 *
-	 * @return An array of selected asset data.
-	 */
-	TArray<TSharedPtr<FAssetData>> GetAssetListSelectedItem() const;
-
-	/**
-	 * Checks if the currently selected asset is valid.
-	 *
-	 * @param CustomMessage Optional custom error message to display if the asset is invalid.
-	 *        If empty, a default message will be used.
-	 * @return true if the selected asset is valid and can be used, false otherwise.
-	 *
-	 * @note This method logs a warning message with the function name when the asset is invalid.
-	 * @see SelectedAsset, SDataAssetManagerWidgetLog
-	 *
-	 * Example usage:
-	 * @code
-	 * if (!IsSelectedAssetValid("Custom error for save operation")) {
-	 *     return;
-	 * }
-	 * @endcode
-	 */
-	bool IsSelectedAssetValid(const FString& CustomMessage = "") const;
-
-	/**
-	 * Sets focus and selection on a newly added asset in the data asset manager.
-	 *
-	 * @param NewAssetData The asset data of the newly added asset to focus on.
-	 *
-	 * @note This method typically triggers UI updates to highlight the new asset.
-	 * @warning Ensure the asset is fully loaded before calling this method.
-	 */
-	void FocusOnNewlyAddedAsset(const FAssetData& NewAssetData);
-
-	/**
-	 * Retrieves the brush icon used for the Revision Control column.
-	 *
-	 * @return Pointer to the slate brush representing the column badge.
-	 */
-	const FSlateBrush* GetRevisionControlColumnIconBadge() const;
-
-	/**
-	 * Generates the full header row widget for the asset table.
-	 *
-	 * Constructs and returns a shared reference to the header row,
-	 * populated with all visible columns.
-	 *
-	 * @return Shared reference to the constructed SHeaderRow.
-	 */
-	TSharedRef<SHeaderRow> GenerateHeaderRow();
-
-	/**
-	 * Creates the arguments used to define the Revision Control column.
-	 *
-	 * Used when dynamically adding the column to the header row.
-	 *
-	 * @return Configured column argument structure.
-	 */
-	SHeaderRow::FColumn::FArguments CreateRevisionControlColumn();
-
-	/**
-	 * Updates the visibility of all columns in the header row.
-	 *
-	 * Evaluates internal visibility flags and shows or hides columns accordingly.
-	 */
-	void UpdateColumnVisibility();
-
-	/**
-	 * Handles mouse button events on column-related buttons.
-	 *
-	 * Used for toggling column visibility or invoking context actions.
-	 *
-	 * @param InGeometry    The geometry of the widget receiving the click.
-	 * @param MouseEvent    The mouse event to handle.
-	 * @return A handled or unhandled FReply.
-	 */
-	FReply ColumnButtonClicked(const FGeometry& InGeometry, const FPointerEvent& MouseEvent);
-
-	/**
-	 * Adds a new column to the provided header row.
-	 *
-	 * Dynamically appends a column with the specified ID, label, and fill width.
-	 *
-	 * @param InHeaderRow   The header row to modify.
-	 * @param ColumnId      Unique identifier for the column.
-	 * @param Label         Text label displayed in the header.
-	 * @param FillWidth     The fill ratio for the column’s width.
+	 * @brief Adds an asset list column to the provided header row.
+	 * @param InHeaderRow Header row that receives the column.
+	 * @param ColumnId Unique column identifier.
+	 * @param Label Display label for the column.
+	 * @param FillWidth Relative fill width used by the column.
 	 */
 	void AddColumnToHeader(TSharedPtr<SHeaderRow> InHeaderRow, const FName& ColumnId, const FString& Label, const float FillWidth);
 
 	/**
-	 * Initializes the map of column adder functions.
-	 *
-	 * Each entry in the map corresponds to a column and its adder logic.
-	 * Used during header row construction.
+	 * @brief Creates arguments for the revision-control status column.
+	 * @return Column arguments for the revision-control column.
 	 */
+	SHeaderRow::FColumn::FArguments CreateRevisionControlColumn();
+
+	/** @brief Updates the text and state shown by the combo button. */
+	void UpdateComboButtonContent();
+
+	/**
+	 * @brief Returns selected asset list items.
+	 * @return Array of selected asset data pointers.
+	 */
+	TArray<TSharedPtr<FAssetData>> GetAssetListSelectedItem() const;
+
+	/**
+	 * @brief Checks whether the current selected asset is valid for an action.
+	 * @param CustomMessage Optional message included in failure feedback.
+	 * @return true when the current selection is valid.
+	 */
+	bool IsSelectedAssetValid(const FString& CustomMessage = "") const;
+
+	/**
+	 * @brief Selects and focuses a newly added asset in the list.
+	 * @param NewAssetData Asset data for the newly added asset.
+	 */
+	void FocusOnNewlyAddedAsset(const FAssetData& NewAssetData);
+
+	/**
+	 * @brief Returns the icon badge used for revision-control column state.
+	 * @return Slate brush for the current revision-control badge.
+	 */
+	const FSlateBrush* GetRevisionControlColumnIconBadge() const;
+
+	/**
+	 * @brief Creates the asset list header row.
+	 * @return Header row with all currently registered columns.
+	 */
+	TSharedRef<SHeaderRow> GenerateHeaderRow();
+
+	/** @brief Applies column visibility settings to the asset list header. */
+	void UpdateColumnVisibility();
+
+	/**
+	 * @brief Handles clicks on the column-visibility header button.
+	 * @param InGeometry Button geometry at the time of the event.
+	 * @param MouseEvent Mouse event that triggered the button.
+	 * @return Reply describing how the click was handled.
+	 */
+	FReply ColumnButtonClicked(const FGeometry& InGeometry, const FPointerEvent& MouseEvent);
+
+	/** @brief Initializes functions that add asset list columns. */
 	void InitializeColumnAdders();
 
 	/**
-	 * Retrieves the text block info related to the currently selected item(s).
-	 *
-	 * Returns user-facing information about the selected assets or context.
-	 *
-	 * @return Localized text for display in the UI.
+	 * @brief Toggles a column visibility flag.
+	 * @param bColumnFlag Pointer to the visibility flag to toggle.
+	 */
+	void ToggleColumn(bool* bColumnFlag);
+
+	/**
+	 * @brief Adds a column visibility entry to a menu.
+	 * @param MenuBuilder Menu builder that receives the entry.
+	 * @param Label Entry label displayed in the menu.
+	 * @param Tooltip Tooltip text displayed for the entry.
+	 * @param ColumnFlag Visibility flag controlled by the entry.
+	 */
+	void AddColumnMenuEntry(FMenuBuilder& MenuBuilder, FText Label, FText Tooltip, bool* ColumnFlag);
+
+	/**
+	 * @brief Checks whether a column visibility flag is enabled.
+	 * @param bColumnPtr Pointer to the visibility flag.
+	 * @return true when the flag exists and is enabled.
+	 */
+	bool IsColumnVisible(bool* bColumnPtr) const;
+
+	/**
+	 * @brief Builds status text describing the current selection.
+	 * @return Text shown in the manager status area.
 	 */
 	FText GetSelectedTextBlockInfo() const;
 
-
-#pragma region Data
 	/**
-	 * Structure that stores all asset data collections used by the asset manager.
+	 * @brief Checks whether the details view has no selected objects.
+	 * @return true when the details view is empty or unavailable.
 	 */
+	bool IsDetailsViewEmpty() const;
+
+private:
+	/** @brief Asset lists, selection, and active filter state. */
 	FAssetManagerData AssetManagerData;
 
-	/**
-	 * Structure that stores all UI widgets used in the asset manager panel.
-	 *
-	 * Centralizes all Slate widget references for easier lifetime management and initialization.
-	 */
+	/** @brief Slate widgets owned by this manager widget. */
 	FAssetManagerWidgets AssetManagerWidgets;
 
-	/**
-	 * Current active search query text.
-	 *
-	 * Bound bidirectionally to search box widget
-	 * and filter logic.
-	 */
+	/** @brief Search text attribute bound to the asset list filter. */
 	TAttribute<FText> SearchText = TAttribute<FText>();
 
-	/**
-	 * Typography settings for UI text elements.
-	 *
-	 * Defines font family, size, and style used
-	 * throughout the asset manager UI.
-	 */
+	/** @brief Font information used by text controls. */
 	FSlateFontInfo TextFontInfo = {};
 
-	/**
-	 * Delegate handles for asset registry event subscriptions.
-	 */
+	/** @brief Delegate handles registered with editor systems. */
 	FManagerDelegateHandles ManagerDelegateHandles;
 
-	/**
-	 * Structure that stores all data related to editable widgets and text inputs.
-	 */
+	/** @brief Inline rename widget registry and rename state. */
 	FEditableWidgets EditableWidgets;
 
-	/**
-	 * Combo box asset list items.
-	 *
-	 * An array of shared pointers to FString objects representing the list of asset types available in the combo box.
-	 */
-	TArray<TSharedPtr<FString>> ComboBoxAssetListItems {};
+	/** @brief Combo-box entries for asset type filters. */
+	TArray<TSharedPtr<FString>> ComboBoxAssetListItems = {};
 
-	/**
-	 * List of plugin filter items.
-	 *
-	 * Each element is a shared pointer to an FString representing a plugin name that can
-	 * be used to filter assets by their originating plugin.
-	 */
-	TArray<TSharedPtr<FString>> PluginFilterListItems {};
+	/** @brief Combo-box entries for plugin path filters. */
+	TArray<TSharedPtr<FString>> PluginFilterListItems = {};
 
-	/**
-	 * Selected asset type.
-	 *
-	 * A shared pointer to the selected asset type as a string.
-	 */
+	/** @brief Currently selected asset type filter. */
 	TSharedPtr<FString> SelectedAssetType = nullptr;
 
-	/**
-	 * Indicates whether the slot view is visible.
-	 *
-	 * This boolean flag determines if the asset slot view is visible in the UI.
-	 */
+	/** @brief Visibility flag for the optional asset list slot. */
 	bool bIsSlotVisible = true;
 
-	/**
-	 * The value for the splitter position.
-	 *
-	 * This attribute determines the position of the splitter dividing the UI sections.
-	 */
+	/** @brief Splitter size value for the asset list and details panels. */
 	TAttribute<float> SplitterValue = 0.4f;
 
-	/**
-	 * Column configuration data for the asset table.
-	 *
-	 * Contains visibility flags, column order, and functions for adding columns
-	 * to the header row. Used to control which columns are shown and their layout.
-	 */
+	/** @brief Column registration, order, and visibility state. */
 	FColumnData ColumnData;
-
 #pragma endregion Data
 };

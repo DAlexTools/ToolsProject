@@ -1,9 +1,8 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 #include "Widgets/SCompoundWidget.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
@@ -11,153 +10,139 @@
 #include "SFolderItemTree.h"
 #include "DataAssetManagerTypes.h"
 
-
 /**
- * @class SFolderTreeWidget
- * @brief A Slate widget representing a folder tree for assets, with search, filtering, and expansion capabilities.
- *
- * This widget allows users to navigate and interact with a hierarchical folder structure,
- * supports searching folders, filtering visible items, expanding/collapsing nodes, and selecting a folder.
+ * @brief Slate widget that displays selectable project and plugin folder trees.
  */
 class DATAASSETMANAGER_API SFolderTreeWidget final : public SCompoundWidget
 {
 public:
-	/**
-	 * @brief Slate widget construction arguments.
-	 */
+	/** @brief Slate arguments for constructing the folder tree widget. */
 	SLATE_BEGIN_ARGS(SFolderTreeWidget) {}
 	SLATE_END_ARGS()
 
 	/**
 	 * @brief Constructs the folder tree widget.
-	 * @param InArgs The Slate arguments used for widget construction.
+	 * @param InArgs Slate construction arguments.
 	 */
 	void Construct(const FArguments& InArgs);
 
 	/**
-	 * @brief Gets the currently selected folder path in the tree.
-	 * @return The path of the selected directory as FString.
+	 * @brief Returns the currently selected directory.
+	 * @return Selected long package path or project folder path.
 	 */
-	FString GetSelectedDirectory() const;
+	const FString& GetSelectedDirectory() const;
 
 private:
 	/**
-	 * @brief Handles search text committed by the user.
-	 * @param InText The text entered by the user.
-	 * @param CommitInfo Type of commit (e.g., Enter pressed, focus lost).
+	 * @brief Handles committed search text.
+	 * @param InText Text committed by the search box.
+	 * @param CommitInfo Commit type reported by Slate.
 	 */
 	void OnSearchTextCommitted(const FText& InText, ETextCommit::Type CommitInfo);
 
 	/**
-	 * @brief Handles changes to the search text as the user types.
-	 * @param InText The current text in the search box.
+	 * @brief Handles live search text changes.
+	 * @param InText Current search text.
 	 */
 	void OnSearchTextChanged(const FText& InText);
 
 	/**
-	 * @brief Updates the folder tree based on the current search filter.
+	 * @brief Refreshes the visible tree according to the current search filter.
 	 */
 	void UpdateFilteredTree();
 
 	/**
-	 * @brief Recursively expands all nodes in the tree starting from the given node.
-	 * @param Node The root node to start expanding from.
+	 * @brief Recursively expands a folder tree node and its children.
+	 * @param Node Root node to expand.
 	 */
 	void ExpandAll(const TSharedPtr<FAssetTreeFolderNode>& Node);
 
 	/**
-	 * @brief Filters a single tree item according to the provided filter text.
-	 * @param Item The tree item to filter.
-	 * @param FilterText The text used to filter items.
-	 * @return A pointer to the filtered item or nullptr if it does not match.
+	 * @brief Builds a filtered copy of a folder tree node.
+	 * @param Item Node to filter.
+	 * @param FilterText Search text used for matching.
+	 * @return Filtered node copy, or nullptr when the node and its children do not match.
 	 */
 	TSharedPtr<FAssetTreeFolderNode> FilterTreeItem(const TSharedPtr<FAssetTreeFolderNode>& Item, const FString& FilterText);
 
 	/**
-	 * @brief Generates the header row for the folder tree.
-	 * @return A shared reference to the header row widget.
+	 * @brief Creates the folder tree header row.
+	 * @return Header row widget.
 	 */
 	TSharedRef<SHeaderRow> GetTreeHeaderRow();
 
 	/**
-	 * @brief Generates a row widget for a single tree item.
-	 * @param Item The item to generate a row for.
-	 * @param OwnerTable The tree view that owns this row.
-	 * @return A shared reference to the table row widget.
+	 * @brief Generates a row widget for a folder tree item.
+	 * @param Item Folder node to display.
+	 * @param OwnerTable Table view that owns the row.
+	 * @return Row widget for the folder node.
 	 */
 	TSharedRef<ITableRow> OnTreeGenerateRow(TSharedPtr<FAssetTreeFolderNode> Item, const TSharedRef<STableViewBase>& OwnerTable);
 
 	/**
-	 * @brief Retrieves the children of a given tree item.
-	 * @param Item The parent item.
-	 * @param OutChildren Array to populate with child items.
+	 * @brief Supplies child nodes for a tree item.
+	 * @param Item Parent node.
+	 * @param OutChildren Receives child nodes.
 	 */
 	void OnTreeGetChildren(TSharedPtr<FAssetTreeFolderNode> Item, TArray<TSharedPtr<FAssetTreeFolderNode>>& OutChildren);
 
 	/**
-	 * @brief Called when the tree selection changes.
-	 * @param Item The newly selected item.
-	 * @param SelectInfo The type of selection change.
+	 * @brief Handles selection changes in the folder tree.
+	 * @param Item Newly selected node.
+	 * @param SelectInfo Selection cause.
 	 */
 	void OnTreeSelectionChanged(TSharedPtr<FAssetTreeFolderNode> Item, ESelectInfo::Type SelectInfo);
 
 	/**
-	 * @brief Called when a tree node is expanded or collapsed.
-	 * @param Item The item that changed expansion state.
-	 * @param bIsExpanded True if the item is now expanded.
+	 * @brief Handles expansion state changes for a tree node.
+	 * @param Item Node whose expansion state changed.
+	 * @param bIsExpanded true when the node is expanded.
 	 */
 	void OnTreeExpansionChanged(TSharedPtr<FAssetTreeFolderNode> Item, bool bIsExpanded);
 
 	/**
-	 * @brief Populates the tree with subfolders of the plugin.
-	 * @param ParentItem The parent folder node to populate under.
+	 * @brief Adds project plugin folders under the provided parent item.
+	 * @param ParentItem Parent folder node.
 	 */
-	void PopulatePluginSubFolders(TSharedPtr<FAssetTreeFolderNode> ParentItem);
+	void PopulatePluginSubFolders(const TSharedPtr<FAssetTreeFolderNode>& ParentItem);
 
 	/**
-	 * @brief Refreshes the folder tree, updating items and their state.
+	 * @brief Rebuilds folder tree items from project and plugin paths.
 	 */
 	void UpdateFolderTree();
 
 	/**
-	 * @brief Fills the tree starting from the specified item, optionally using cached items to optimize.
-	 * @param Item The root item to start filling from.
-	 * @param CachedItems A set of cached items to reuse.
+	 * @brief Populates a folder node from filesystem subdirectories.
+	 * @param Item Folder node to populate.
+	 * @param CachedItems Cached nodes used to preserve expansion and visibility state.
 	 */
-	void FillTreeFromPath(TSharedPtr<FAssetTreeFolderNode> Item, const TSet<TSharedPtr<FAssetTreeFolderNode>>& CachedItems);
+	void FillTreeFromPath(const TSharedPtr<FAssetTreeFolderNode>& Item, const TSet<TSharedPtr<FAssetTreeFolderNode>>& CachedItems);
 
 	/**
-	 * @brief Checks if a tree item or any of its children are expanded.
-	 * @param Item The item to check.
-	 * @param CachedItems Set of cached expanded items.
-	 * @return True if the item or any child is expanded.
+	 * @brief Checks whether a tree item should be restored as expanded.
+	 * @param Item Item to test.
+	 * @param CachedItems Cached expanded items.
+	 * @return true when the item was previously expanded.
 	 */
 	bool TreeItemIsExpanded(const TSharedPtr<FAssetTreeFolderNode>& Item, const TSet<TSharedPtr<FAssetTreeFolderNode>>& CachedItems) const;
 
 	/**
-	 * @brief Checks if a tree item contains the current search text.
-	 * @param Item The item to check.
-	 * @return True if the item matches the search text.
+	 * @brief Checks whether a tree item matches the active search text.
+	 * @param Item Item to test.
+	 * @return true when the item matches the search text.
 	 */
 	bool TreeItemContainsSearchText(const TSharedPtr<FAssetTreeFolderNode>& Item) const;
 
 	/**
-	 * @brief Sorts tree items, optionally updating the stored sorting order.
-	 * @param UpdateSortingOrder Whether to update the saved sorting order.
+	 * @brief Sorts tree items and optionally toggles the saved sort order.
+	 * @param UpdateSortingOrder Whether to update the stored sort mode.
 	 */
 	void SortTreeItems(const bool UpdateSortingOrder);
 
 private:
-	/**
-	 * Structure containing the tree data (list of items, selected directory, etc.).
-	 * Used for building and filtering the TreeView.
-	 */
-	FFolderTreeData FolderTreeData;
+	/** @brief Folder tree item data and selection state. */
+	FFolderTreeData FolderTreeItem{};
 
-	/**
-	 * Structure holding the widget state (expanded nodes, search text, Slate widget references, etc.).
-	 * Used to control TreeView behavior and display.
-	 */
-	FFolderTreeState FolderTreeState;
+	/** @brief Slate widget references and transient folder tree state. */
+	FFolderTreeState FolderTreeState{};
 };
-
