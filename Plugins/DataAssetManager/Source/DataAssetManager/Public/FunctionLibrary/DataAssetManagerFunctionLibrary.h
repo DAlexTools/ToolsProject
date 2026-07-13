@@ -50,6 +50,24 @@ namespace DataAssetManager
 	 */
 	DATAASSETMANAGER_API TTuple<FString, FString> GetNormalizedAndProjectPath(const FString& InPath);
 
+	/**
+	 * @brief Converts a path between project-relative and absolute project content formats.
+	 *
+	 * If @p bToAbsolute is true, converts a path relative to the configured root
+	 * (e.g. "/Textures") into an absolute project content path
+	 * (e.g. "/Game/Textures").
+	 *
+	 * If @p bToAbsolute is false, performs the reverse conversion from a project
+	 * content path to the configured root-relative format.
+	 *
+	 * If the input path cannot be converted or is invalid, an empty string is returned.
+	 *
+	 * @param InPath Path to convert.
+	 * @param bToAbsolute True to convert to an absolute project content path,
+	 *                    false to convert to a root-relative path.
+	 *
+	 * @return Converted path, or an empty string if conversion failed.
+	 */
 	DATAASSETMANAGER_API FString PathConvert(const FString& InPath, bool bToAbsolute);
 
 	/**
@@ -100,6 +118,30 @@ namespace DataAssetManager
 	 */
 	[[nodiscard]] DATAASSETMANAGER_API bool FolderIsExternal(const FString& InPath);
 
+	/**
+	 * @brief Serializes a Data Asset to a JSON file.
+	 *
+	 * Converts the Data Asset into its JSON representation using Unreal Engine's
+	 * JSON serialization system and writes the result to the specified file.
+	 *
+	 * @param DataAsset Data Asset to serialize.
+	 * @param FilePath Destination JSON file path.
+	 *
+	 * @return True if the asset was successfully serialized and saved; otherwise false.
+	 */
 	DATAASSETMANAGER_API bool SaveDataAssetToJsonFile(const UDataAsset* DataAsset, const FString& FilePath);
+	
+	/**
+	 * @brief Deserializes a Data Asset from a JSON file.
+	 *
+	 * Loads a JSON file, deserializes its contents into the specified Data Asset,
+	 * and applies the changes. After successful deserialization, the asset is
+	 * marked as modified and PostEditChange() is called to notify the editor.
+	 *
+	 * @param DataAsset Data Asset instance to populate.
+	 * @param FilePath Source JSON file path.
+	 *
+	 * @return True if the asset was successfully loaded and deserialized; otherwise false.
+	 */
 	DATAASSETMANAGER_API bool LoadDataAssetFromJsonFile(UDataAsset* DataAsset, const FString& FilePath);
 }
