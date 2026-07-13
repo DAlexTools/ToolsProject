@@ -74,6 +74,8 @@ Plugins/*/Intermediate/*
 # Cache files for the editor to use
 DerivedDataCache/*
 
+.agents/*
+
 # temp_folder
 enc_temp_folder/*
 enc_temp_folder/e13c52ac34fc7a5d32c695d4c5d2db/SStatCommandGrid.h
