@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #pragma once
 
@@ -6,9 +6,19 @@
 #include "BaseClasses/BlueprintValidatorBase.h"
 #include "DefaultAssignmentValidator.generated.h"
 
-class UK2Node_VariableSet;
 /**
+ * @class UDefaultAssignmentValidator
+ * @brief Blueprint asset validator that detects redundant variable assignments.
  *
+ * This validator scans Blueprint graphs and looks for variable assignment nodes
+ * (Set nodes) where a variable is explicitly assigned the same value that is already
+ * defined as its default value in the Blueprint class.
+ *
+ * Such assignments are considered redundant because they do not change runtime state
+ * and may indicate unnecessary logic that can be safely removed.
+ *
+ * Validation issues are reported through Unreal Engine's Data Validation framework,
+ * with a direct navigation action allowing the user to jump to the problematic node.
  */
 UCLASS()
 class VALIDATORX_API UDefaultAssignmentValidator : public UBlueprintValidatorBase
@@ -17,43 +27,23 @@ class VALIDATORX_API UDefaultAssignmentValidator : public UBlueprintValidatorBas
 public:
 	UDefaultAssignmentValidator();
 
-	virtual void SetValidationEnabled(bool bEnabled) override
-	{
-		static UDefaultAssignmentValidator* CDO = GetMutableDefault<UDefaultAssignmentValidator>();
-		if (bIsConfigDisabled)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Validator is disabled by config!"));
-			return;
-		}
-
-		CDO->bIsEnabled = bEnabled;
-		SaveConfig();
-	}
-
 	/**
-	 * Checks if the validator is currently enabled.
+	 * @brief Validates a Blueprint asset for redundant variable assignments.
 	 *
-	 * @return True if validation is active
-	 */
-	virtual bool IsEnabled() const override;
-
-	/**
-	 * Checks whether this validator can validate the given asset.
+	 * Iterates through all Blueprint graphs and searches for UK2Node_VariableSet nodes.
+	 * For each variable assignment node, compares the assigned pin default value with
+	 * the property's default value stored in the Blueprint's Class Default Object (CDO).
 	 *
-	 * @param InAssetData   Asset metadata (path, type, etc.)
-	 * @param InObject      Loaded asset object (null if not loaded)
-	 * @param InContext     Validation context for error/warning accumulation
-	 * @return True if this validator should process the asset
-	 */
-	virtual bool CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const override;
-
-	/**
-	 * Performs validation on a loaded asset.
+	 * If both values are identical and the input pin has no connections, the assignment
+	 * is considered redundant and a validation warning is reported.
 	 *
-	 * @param InAssetData   Asset metadata
-	 * @param InAsset       Loaded asset object
-	 * @param Context       Validation context for reporting issues
-	 * @return EDataValidationResult::Passed if valid, Failed/Invalid otherwise
+	 * @param InAssetData Metadata describing the asset being validated.
+	 * @param InAsset Loaded asset object expected to be a Blueprint.
+	 * @param Context Validation context used for reporting warnings and attaching actions.
+	 *
+	 * @return EDataValidationResult::Invalid if redundant assignments are found,
+	 *         otherwise EDataValidationResult::Valid.
 	 */
 	virtual EDataValidationResult ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) override;
+
 };

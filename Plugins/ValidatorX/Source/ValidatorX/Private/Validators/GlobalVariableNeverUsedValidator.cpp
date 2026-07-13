@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 
 #include "Validators/GlobalVariableNeverUsedValidator.h"
@@ -8,21 +8,10 @@
 #include "BlueprintEditor.h"
 #include "SMyBlueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Validation/BlueprintValidatorActionHelpers.h"
 
 UGlobalVariableNeverUsedValidator::UGlobalVariableNeverUsedValidator()
 {
-	SetValidationEnabled(true);
-}
-
-bool UGlobalVariableNeverUsedValidator::IsEnabled() const
-{
-	static const UGlobalVariableNeverUsedValidator* CDO = GetDefault<UGlobalVariableNeverUsedValidator>();
-	return CDO->bIsEnabled && !bIsConfigDisabled;
-}
-
-bool UGlobalVariableNeverUsedValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
-{
-	return InAsset && InAsset->IsA<UBlueprint>();
 }
 
 EDataValidationResult UGlobalVariableNeverUsedValidator::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
@@ -95,65 +84,43 @@ EDataValidationResult UGlobalVariableNeverUsedValidator::ValidateLoadedAsset_Imp
 				const TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
 
 				// Jump to variable
-				Message->AddToken(FActionToken::Create(
+				ValidatorX::Actions::AddJumpToBlueprintItemAction(
+					Message,
 					FText::Format(INVTEXT("Jump to Variable - '{0}'"), FText::FromName(VarDesc.VarName)),
-					FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([Blueprint, VarDesc]
-						{
-							if(Blueprint)
-							{
-								UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-								AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
-								if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-								{
-									if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-									{
-										if(TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
-										{
-											MyBlueprintWidget->SelectItemByName(VarDesc.VarName, ESelectInfo::Direct, INDEX_NONE, false);
-										}
-									}
-								}
-							}
-						}))
-				);
+					Blueprint,
+					VarDesc.VarName);
 
 				// Fix: delete variable
-				Message->AddToken(FActionToken::Create(
+				ValidatorX::Actions::AddAction(
+					Message,
 					FText::Format(INVTEXT("Fix - Delete Variable - '{0}'"), FText::FromName(VarDesc.VarName)),
-					FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([VarDesc, Blueprint]
+					FSimpleDelegate::CreateLambda([=]
 						{
 							if(Blueprint)
 							{
-								UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-								AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-
-								FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float)
+								if(ValidatorX::Actions::OpenAsset(Blueprint))
+								{
+									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float)
 									{
-										if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
+										if(FBlueprintEditor* BlueprintEditor = ValidatorX::Actions::FindBlueprintEditor(Blueprint, false))
 										{
-											if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-											{
-												const FText ConfirmText = FText::Format(
-													INVTEXT("Are you sure you want to delete variable '{0}' from Blueprint '{1}'?"),
-													FText::FromName(VarDesc.VarName),
-													FText::FromString(Blueprint->GetName())
-												);
+											const FText ConfirmText = FText::Format(
+												INVTEXT("Are you sure you want to delete variable '{0}' from Blueprint '{1}'?"),
+												FText::FromName(VarDesc.VarName),
+												FText::FromString(Blueprint->GetName())
+											);
 
-												if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
-												{
-													FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, VarDesc.VarName);
-													FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-												}
+											if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
+											{
+												FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, VarDesc.VarName);
+												FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 											}
 										}
 										return false;
 									}));
+								}
 							}
-						}))
-				);
+						}));
 
 				bIsError = true;
 			}

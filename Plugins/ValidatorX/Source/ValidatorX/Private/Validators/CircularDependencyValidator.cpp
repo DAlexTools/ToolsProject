@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 
 #include "Validators/CircularDependencyValidator.h"
@@ -12,6 +12,7 @@
 #include "EdGraphSchema_K2.h"
 #include "Misc/DataValidation.h"
 #include "BlueprintEditor.h"
+#include "Validation/BlueprintValidatorActionHelpers.h"
 
 UEdGraph* UCircularDependencyValidator::FindGraphByName(UBlueprint* Blueprint, const FName& GraphName)
 {
@@ -35,39 +36,13 @@ UEdGraph* UCircularDependencyValidator::FindGraphByName(UBlueprint* Blueprint, c
 
 UCircularDependencyValidator::UCircularDependencyValidator()
 {
-	SetValidationEnabled(true);
-}
-
-void UCircularDependencyValidator::SetValidationEnabled(bool bEnabled)
-{
-	static UCircularDependencyValidator* CDO = GetMutableDefault<UCircularDependencyValidator>();
-	if(bIsConfigDisabled)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Validator is disabled by config!"));
-		return;
-	}
-
-	CDO->bIsEnabled = bEnabled;
-	SaveConfig();
-}
-
-bool UCircularDependencyValidator::IsEnabled() const
-{
-	static const UCircularDependencyValidator* CDO = GetDefault<UCircularDependencyValidator>();
-	return CDO->bIsEnabled && !bIsConfigDisabled;
-
-}
-
-bool UCircularDependencyValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
-{
-	return InAsset && InAsset->IsA<UBlueprint>();
 }
 
 EDataValidationResult UCircularDependencyValidator::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
 	bIsError = false;
 
-	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
+	if(UBlueprint* const Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		if(HasCircularDependency(Blueprint, Context))
 		{
@@ -84,20 +59,23 @@ bool UCircularDependencyValidator::HasCircularDependency(UBlueprint* Blueprint, 
 
 	auto CollectGraphCalls = [&] (const TArray<UEdGraph*>& Graphs)
 		{
-			for(UEdGraph* Graph : Graphs)
+			for(UEdGraph* const Graph : Graphs)
 			{
-				if(!Graph) continue;
+				if(!Graph) 
+				{
+					continue;
+				}
 
 				FName ThisGraphName = Graph->GetFName();
 				TArray<FName>& Called = CallGraph.FindOrAdd(ThisGraphName);
 
-				for(UEdGraphNode* Node : Graph->Nodes)
+				for(UEdGraphNode* const Node : Graph->Nodes)
 				{
-					if(UK2Node_CallFunction* CallFunction = Cast<UK2Node_CallFunction>(Node))
+					if(UK2Node_CallFunction* const CallFunction = Cast<UK2Node_CallFunction>(Node))
 					{
 						Called.Add(CallFunction->FunctionReference.GetMemberName());
 					}
-					else if(UK2Node_MacroInstance* Macro = Cast<UK2Node_MacroInstance>(Node))
+					else if(UK2Node_MacroInstance* const Macro = Cast<UK2Node_MacroInstance>(Node))
 					{
 						Called.Add(Macro->GetMacroGraph()->GetFName());
 					}
@@ -123,10 +101,12 @@ bool UCircularDependencyValidator::HasCircularDependency(UBlueprint* Blueprint, 
 			TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Error, MessageText);
 			if(UEdGraph* TargetGraph = FindGraphByName(Blueprint, CyclePath[0]))
 			{
-				Message->AddToken(FActionToken::Create(
+				ValidatorX::Actions::AddJumpToGraphAction(
+					Message,
 					FText::FromString("Jump to graph"),
 					FText::FromString("Opens the first function or macro involved in the circular call"),
-					FSimpleDelegate::CreateUObject(this, &UCircularDependencyValidator::OpenGraphEditor, TargetGraph, Blueprint)));
+					Blueprint,
+					TargetGraph);
 			}
 
 			return true;
@@ -167,21 +147,4 @@ bool UCircularDependencyValidator::DetectCycle(const FName& StartName, TMap<FNam
 	Stack.Remove(StartName);
 	return false;
 }
-
-
-void UCircularDependencyValidator::OpenGraphEditor(UEdGraph* TargetGraph, UBlueprint* Blueprint)
-{
-	if (UAssetEditorSubsystem* Subsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>())
-	{
-		Subsystem->OpenEditorForAsset(Blueprint);
-		if (IAssetEditorInstance* EditorInstance = Subsystem->FindEditorForAsset(Blueprint, false))
-		{
-			if (IBlueprintEditor* BPEditor = StaticCast<IBlueprintEditor*>(EditorInstance))
-			{
-				BPEditor->OpenGraphAndBringToFront(TargetGraph, true);
-			}
-		}
-	}
-}
-
 

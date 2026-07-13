@@ -1,74 +1,68 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #include "Validators/DefaultAssignmentValidator.h"
 #include "K2Node_VariableSet.h"
 #include "Misc/DataValidation.h"
 #include "BlueprintEditor.h"
-#include "Library/UtilsFunctionLibrary.h"
+#include "Validation/BlueprintValidatorActionHelpers.h"
 
 UDefaultAssignmentValidator::UDefaultAssignmentValidator()
 {
-	SetValidationEnabled(true);
-}
-
-bool UDefaultAssignmentValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
-{
-	return InAsset && InAsset->IsA<UBlueprint>();
-}
-
-bool UDefaultAssignmentValidator::IsEnabled() const
-{
-	static const UDefaultAssignmentValidator* CDO = GetDefault<UDefaultAssignmentValidator>();
-	return CDO->bIsEnabled && !bIsConfigDisabled;
 }
 
 EDataValidationResult UDefaultAssignmentValidator::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
 {
 	bIsError = false;
 
-	if (UBlueprint* const Blueprint = Cast<UBlueprint>(InAsset))
+	if(UBlueprint* Blueprint = Cast<UBlueprint>(InAsset))
 	{
 		TArray<UEdGraph*> AllGraphs;
 		Blueprint->GetAllGraphs(AllGraphs);
 
-		for (UEdGraph* const Graph : AllGraphs)
+		for(UEdGraph* Graph : AllGraphs)
 		{
-			for (UEdGraphNode* const Node : Graph->Nodes)
+			for(UEdGraphNode* Node : Graph->Nodes)
 			{
-				if (UK2Node_VariableSet* const VarSetNode = Cast<UK2Node_VariableSet>(Node))
+				if(UK2Node_VariableSet* VarSetNode = Cast<UK2Node_VariableSet>(Node))
 				{
-					const FName		 VarName = VarSetNode->GetVarName();
-					const FProperty* const Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName);
-					if (!Property)
+					const FName VarName = VarSetNode->GetVarName();
+					const FProperty* Property = FindFProperty<FProperty>(Blueprint->GeneratedClass, VarName);
+					if(!Property)
 					{
 						continue;
 					}
 
-					if (UEdGraphPin* const ValuePin = VarSetNode->FindPin(VarName))
+					if(UEdGraphPin* ValuePin = VarSetNode->FindPin(VarName))
 					{
-						if (!ValuePin->HasAnyConnections())
+						if(!ValuePin->HasAnyConnections())
 						{
 							const FString PinDefaultValue = ValuePin->DefaultValue;
-							FString		  PropertyDefaultValue;
-							if (const auto DefaultObjectPtr = Blueprint->GeneratedClass->GetDefaultObject(false))
+
+							FString PropertyDefaultValue;
+
+							if(const auto DefaultObjectPtr = Blueprint->GeneratedClass->GetDefaultObject(false))
 							{
 								FString Temp;
 								Property->ExportText_InContainer(0, Temp, DefaultObjectPtr, DefaultObjectPtr, nullptr, PPF_None);
 								PropertyDefaultValue = Temp;
 							}
 
-							if (PinDefaultValue == PropertyDefaultValue)
+							if(PinDefaultValue == PropertyDefaultValue)
 							{
 								const FText MessageText = FText::Format(
 									INVTEXT("Redundant assignment detected: variable '{0}' in Blueprint '{1}' is assigned its default value."),
 									FText::FromString(Graph->GetName()),
-									FText::FromString(Blueprint->GetName()));
+									FText::FromString(Blueprint->GetName())
+								);
 
 								TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
-								Message->AddToken(FActionToken::Create(FText::FromString("Jump to Node"), FText::GetEmpty(),
-									FSimpleDelegate::CreateStatic(&FBlueprintHelper::JumpToNode, Blueprint, Graph, Cast<UEdGraphNode>(VarSetNode))));
+								ValidatorX::Actions::AddJumpToNodeAction(Message, FText::FromString("Jump to Node"), Blueprint, Graph, VarSetNode);
+
 
 								bIsError = true;
+
+
+
 							}
 						}
 					}
@@ -79,4 +73,3 @@ EDataValidationResult UDefaultAssignmentValidator::ValidateLoadedAsset_Implement
 
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 }
-

@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #include "Validators/LocalVariableNeverUsedValidator.h"
 #include "K2Node_FunctionEntry.h"
@@ -18,22 +17,11 @@
 #include "BlueprintEditor.h"
 #include "SMyBlueprint.h"
 #include "Kismet2/BlueprintEditorUtils.h"
+#include "Validation/BlueprintValidatorActionHelpers.h"
 
 
 ULocalVariableNeverUsedValidator::ULocalVariableNeverUsedValidator()
 {
-    SetValidationEnabled(true);
-}
-
-bool ULocalVariableNeverUsedValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context) const
-{
-    return InAsset && InAsset->IsA<UBlueprint>();
-}
-
-bool ULocalVariableNeverUsedValidator::IsEnabled() const
-{
-    static const ULocalVariableNeverUsedValidator* CDO = GetDefault<ULocalVariableNeverUsedValidator>();
-    return CDO->bIsEnabled && !bIsConfigDisabled;
 }
 
 EDataValidationResult ULocalVariableNeverUsedValidator::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
@@ -94,44 +82,19 @@ EDataValidationResult ULocalVariableNeverUsedValidator::ValidateLoadedAsset_Impl
 
                      const TSharedRef<FTokenizedMessage> Message = Context.AddMessage(EMessageSeverity::Warning, MessageText);
                      const FText JumpToVariableText = FText::Format(INVTEXT("Jump to variable  - '{0}'"), FText::FromName(LocalVar.VarName));
-                     Message->AddToken(FActionToken::Create(JumpToVariableText, FText::FromString(""), FSimpleDelegate::CreateLambda([=]
-                         {
-                             if(Blueprint && EntryNode)
-                             {
-                                 UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-                                 AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-                                 if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, false))
-                                 {
-                                     if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
-                                     {
-                                         if (TSharedPtr<SGraphEditor> GraphEditor = BlueprintEditor->OpenGraphAndBringToFront(Graph, true))
-                                         {
-                                             if(TSharedPtr<SMyBlueprint> MyBlueprintWidget = BlueprintEditor->GetMyBlueprintWidget())
-                                             {
-                                                 MyBlueprintWidget->SelectItemByName(LocalVar.VarName,
-                                                     ESelectInfo::Direct,
-                                                     INDEX_NONE,
-                                                     false);
-                                             }
-                                         }
-                                     }
-                                 }
-                             }
-                         })));
+                     ValidatorX::Actions::AddJumpToGraphItemAction(Message, JumpToVariableText, Blueprint, Graph, LocalVar.VarName);
 
                      const FText DeleteVariableText = FText::Format(INVTEXT("'Fix' - Delete Local Variable - '{0}'"), FText::FromName(LocalVar.VarName));
-                     Message->AddToken(FActionToken::Create(DeleteVariableText, FText::FromString(""),
+                     ValidatorX::Actions::AddAction(Message, DeleteVariableText,
                          FSimpleDelegate::CreateLambda([=]
                              {
                                  if (Blueprint && EntryNode)
                                  {
-                                     UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-                                     AssetEditorSubsystem->OpenEditorForAsset(Blueprint);
-                                     FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
-                                         {
-                                             if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, /*bFocusIfOpen=*/false))
+                                     if(ValidatorX::Actions::OpenAsset(Blueprint))
+                                     {
+                                         FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
                                              {
-                                                 if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+                                                 if(FBlueprintEditor* BlueprintEditor = ValidatorX::Actions::FindBlueprintEditor(Blueprint, /*bFocusIfOpen=*/false))
                                                  {
                                                      if(BlueprintEditor->GetMyBlueprintWidget().IsValid())
                                                      {
@@ -164,12 +127,12 @@ EDataValidationResult ULocalVariableNeverUsedValidator::ValidateLoadedAsset_Impl
                                                          return false;
                                                      }
                                                  }
-                                             }
 
-                                             return true;
-                                         }));
+                                                 return true;
+                                             }));
+                                     }
                                  }
-                             })));
+                             }));
 
 
                      bIsError = true;

@@ -1,5 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿// Copyright (c) 2026 DimAlek. All Rights Reserved.
 
 #include "Validators/EmptyFunctionValidator.h"
 #include "K2Node_FunctionEntry.h"
@@ -7,22 +6,10 @@
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "BlueprintEditor.h"
 #include "Misc/DataValidation.h"
-#include "Library/UtilsFunctionLibrary.h"
+#include "Validation/BlueprintValidatorActionHelpers.h"
 
 UEmptyFunctionValidator::UEmptyFunctionValidator()
 {
-	SetValidationEnabled(true);
-}
-
-bool UEmptyFunctionValidator::CanValidateAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& InContext) const
-{
-	return InAsset && InAsset->IsA<UBlueprint>();
-}
-
-bool UEmptyFunctionValidator::IsEnabled() const
-{
-	static const UEmptyFunctionValidator* CDO = GetDefault<UEmptyFunctionValidator>();
-	return CDO->bIsEnabled && !bIsConfigDisabled;
 }
 
 EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementation(const FAssetData& InAssetData, UObject* InAsset, FDataValidationContext& Context)
@@ -63,49 +50,45 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 					INVTEXT("Jump to Function - '{0}'"),
 					FText::FromString(FunctionGraph->GetName()));
 
-				Message->AddToken(FActionToken::Create(JumpToFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateStatic(&FBlueprintHelper::OpenGraphEditor, Blueprint, FunctionGraph)));
+				ValidatorX::Actions::AddJumpToGraphAction(Message, JumpToFunctionText, Blueprint, FunctionGraph);
 
 				const FText DeleteFunctionText = FText::Format(
 					INVTEXT("'Fix' - Delete Function - '{0}'"),
 					FText::FromString(FunctionGraph->GetName()));
 
-				Message->AddToken(FActionToken::Create(DeleteFunctionText, FText::GetEmpty(),
-					FSimpleDelegate::CreateLambda([Blueprint, FunctionGraph]
+				ValidatorX::Actions::AddAction(Message, DeleteFunctionText,
+					FSimpleDelegate::CreateLambda([=]
 						{
 							if(Blueprint && FunctionGraph)
 							{
-								if(UAssetEditorSubsystem* AssetEditorSubsystem = FBlueprintHelper::OpenBlueprintEditor(Blueprint))
+								if(ValidatorX::Actions::OpenAsset(Blueprint))
 								{
 									FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([=] (float DeltaTime)
 										{
-											if(IAssetEditorInstance* EditorInstance = AssetEditorSubsystem->FindEditorForAsset(Blueprint, /*bFocusIfOpen=*/false))
+											if(FBlueprintEditor* BlueprintEditor = ValidatorX::Actions::FindBlueprintEditor(Blueprint, /*bFocusIfOpen=*/false))
 											{
-												if(FBlueprintEditor* BlueprintEditor = StaticCast<FBlueprintEditor*>(EditorInstance))
+												const FText ConfirmText = FText::Format(
+													INVTEXT("Are you sure you want to delete the Function '{0}' from Blueprint '{1}'?"),
+													FText::FromString(FunctionGraph->GetName()),
+													FText::FromString(Blueprint->GetName())
+												);
+
+												if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
 												{
-													const FText ConfirmText = FText::Format(
-														INVTEXT("Are you sure you want to delete the Function '{0}' from Blueprint '{1}'?"),
-														FText::FromString(FunctionGraph->GetName()),
-														FText::FromString(Blueprint->GetName())
-													);
+													Blueprint->Modify();
+													FunctionGraph->Modify();
 
-													if(FMessageDialog::Open(EAppMsgType::YesNo, ConfirmText) == EAppReturnType::Yes)
-													{
-														Blueprint->Modify();
-														FunctionGraph->Modify();
+													Blueprint->FunctionGraphs.Remove(FunctionGraph);
+													FunctionGraph->MarkAsGarbage();
 
-														Blueprint->FunctionGraphs.Remove(FunctionGraph);
-														FunctionGraph->MarkAsGarbage();
-
-														FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
-													}
+													FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 												}
 											}
 											return false;
 										}));
 								}
 							}
-						})));
+						}));
 				
 				bIsError = true;
 			}
@@ -113,5 +96,3 @@ EDataValidationResult UEmptyFunctionValidator::ValidateLoadedAsset_Implementatio
 	}
 	return bIsError ? EDataValidationResult::Invalid : EDataValidationResult::Valid;
 }
-
-

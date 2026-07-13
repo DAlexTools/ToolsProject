@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -14,10 +14,7 @@ class UValidatorToggleInterface : public UInterface
 };
 
 /**
- * @brief Interface for validators that can be toggled on or off.
- *
- * Classes implementing this interface must provide functionality to enable,
- * disable, or toggle their validation state.
+ * 
  */
 class VALIDATORX_API IValidatorToggleInterface
 {
@@ -25,17 +22,14 @@ class VALIDATORX_API IValidatorToggleInterface
 
 public:
 	/**
-	 * @brief Toggles the enabled state of this validator.
-	 *
-	 * If the validator is currently enabled, it will be disabled.
-	 * If it is currently disabled, it will be enabled.
+	 * Toggles the enabled state of this validator
 	 */
 	virtual void ToggleValidationEnabled() = 0;
 
 	/**
-	 * @brief Sets the enabled state of this validator.
+	 * Sets the enabled state of this validator
 	 *
-	 * @param bEnabled True to enable validation, false to disable it.
+	 * @param bEnabled  True to enable validation, false to disable
 	 */
 	virtual void SetValidationEnabled(bool bEnabled) = 0;
 };
