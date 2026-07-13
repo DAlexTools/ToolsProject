@@ -133,6 +133,7 @@ bool FValidatorXBranchValidatorsTest::RunTest(const FString& Parameters)
 
 	UBlueprint* Blueprint = NewTransientBlueprint(TEXT("ValidatorX_BranchBlueprint"));
 	UEdGraph* Graph = AddGraph(Blueprint, Blueprint->UbergraphPages, TEXT("EventGraph"));
+	AddNode<UEdGraphNode>(Graph);
 	AddNode<UK2Node_IfThenElse>(Graph);
 
 	TestEqual(TEXT("Branch with unlinked condition is invalid"), Validate(NewValidator<UBranchConditionValidator>(), Blueprint), EDataValidationResult::Invalid);

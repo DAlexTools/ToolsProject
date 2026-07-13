@@ -124,6 +124,13 @@ private:
 	[[nodiscard]] TSharedRef<SBox> GetStateBox();
 
 	/**
+	 * @brief Returns the current display text for the validator enabled state.
+	 *
+	 * @return "Enabled" when the validator is enabled, otherwise "Disabled".
+	 */
+	[[nodiscard]] FText GetStateText() const;
+
+	/**
 	 * @brief Creates the widget for the "Enabled" column.
 	 *
 	 * @return A shared reference to the widget containing the enable/disable checkbox.

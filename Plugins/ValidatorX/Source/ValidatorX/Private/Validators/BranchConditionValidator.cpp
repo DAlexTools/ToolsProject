@@ -29,6 +29,11 @@ EDataValidationResult UBranchConditionValidator::ValidateLoadedAsset_Implementat
 			for(UEdGraphNode* Node : Graph->Nodes)
 			{
 				UK2Node_IfThenElse* Branch = Cast<UK2Node_IfThenElse>(Node);
+				if(!Branch)
+				{
+					continue;
+				}
+
 				const UEdGraphPin* ConditionPin = Branch->GetConditionPin();
 				if(!ConditionPin || !ConditionPin->LinkedTo.IsEmpty())
 				{

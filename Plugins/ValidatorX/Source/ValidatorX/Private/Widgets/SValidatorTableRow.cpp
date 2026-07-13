@@ -97,8 +97,22 @@ TSharedRef<SBox> SValidatorTableRow::GetNameBox()
 
 TSharedRef<SBox> SValidatorTableRow::GetStateBox()
 {
+	return SNew(SBox)
+		.Padding(6.0f, 4.0f)
+		.VAlign(VAlign_Center)
+		.HAlign(HAlign_Center)
+		[
+			SNew(STextBlock)
+				.Text(this, &SValidatorTableRow::GetStateText)
+				.Font(LocalFont)
+				.Justification(ETextJustify::Center)
+		];
+}
+
+FText SValidatorTableRow::GetStateText() const
+{
 	const bool bEnabled = Validator.IsValid() && Validator->IsEnabled();
-	return MakeTextCell(bEnabled ? TEXT("Enabled") : TEXT("Disabled"), ETextJustify::Center);
+	return bEnabled ? INVTEXT("Enabled") : INVTEXT("Disabled");
 }
 
 TSharedRef<SBox> SValidatorTableRow::GetButtonBox()
@@ -135,7 +149,7 @@ void SValidatorTableRow::GetButtonCheckBoxStateChange(ECheckBoxState NewState)
 			default:
 				break;
 		}
-		Invalidate(EInvalidateWidgetReason::Paint);
+		Invalidate(EInvalidateWidgetReason::Layout);
 		OnValidatorChanged.ExecuteIfBound();
 	}
 }

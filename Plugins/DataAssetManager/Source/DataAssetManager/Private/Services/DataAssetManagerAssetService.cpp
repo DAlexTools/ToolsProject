@@ -19,6 +19,7 @@
 #include "ScopedTransaction.h"
 #include "UObject/SavePackage.h"
 #include "UObject/UnrealType.h"
+#include "Types/DataAssetManagerConstants.h"
 
 #define LOCTEXT_NAMESPACE "DataAssetManagerAssetService"
 
@@ -247,10 +248,7 @@ namespace
 	}
 }
 
-void FDataAssetManagerAssetService::LoadDataAssets(
-	const UDataAssetManagerSettings* PluginSettings,
-	TArray<TSharedPtr<FAssetData>>& OutDataAssets,
-	TArray<TSharedPtr<FString>>& OutPluginFilterItems)
+void FDataAssetManagerAssetService::LoadDataAssets( const UDataAssetManagerSettings* PluginSettings, TArray<TSharedPtr<FAssetData>>& OutDataAssets, TArray<TSharedPtr<FString>>& OutPluginFilterItems)
 {
 	OutDataAssets.Reset();
 	OutPluginFilterItems.Reset();
