@@ -35,6 +35,7 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 ## Plugins
 
 ### CppTemplateGenerator
+![CPP Template Generator](Plugins/CppTemplateGenerator/Resources/CPPGenerator.gif)
 
 `CppTemplateGenerator` adds a curated C++ class creation workflow to the Unreal Editor. Instead of manually choosing from the full class picker every time, the plugin exposes a configurable set of native parent classes as direct menu entries.
 
