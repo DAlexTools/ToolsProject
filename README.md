@@ -1,12 +1,13 @@
 # ToolsProject
 
-ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, managing Data Assets in bulk, and running targeted content validation directly inside the Unreal Editor.
+ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, auditing Content Browser assets, managing Data Assets in bulk, and running targeted content validation directly inside the Unreal Editor.
 
 ## Overview
 
 | Area | Plugin | What it adds |
 | --- | --- | --- |
 | C++ workflow | `CppTemplateGenerator` | A configurable `Tools` menu for creating native C++ classes from approved parent templates. |
+| Content Browser audit | `ContentBrowserToolkit` | A large Content Browser filter pack for asset source data, naming, Blueprints, textures, meshes, audio, maps, data assets, and cached dependency checks. |
 | Content management | `DataAssetManager` | A dedicated Data Asset browser with filtering, bulk operations, validation, diffing, reference inspection, and editor utilities. |
 | Scene organization | `OutlinerToolkit` | Scene Outliner columns, filters, actor batch actions, and a world audit panel. |
 | Text editing | `UNotepad` | A dockable in-editor notepad for text, code, JSON, and CSV files. |
@@ -25,6 +26,7 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 | `ToolsProject` | Runtime | Base game module for the Unreal project. |
 | `ToolsProjectEditor` | Editor | Editor-side module used by the project. |
 | `CppTemplateGenerator` | Editor plugin | Adds C++ template creation tools to the Unreal Editor. |
+| `ContentBrowserToolkit` | Editor plugin | Adds custom Content Browser front-end filters and cached Asset Registry audit helpers. |
 | `DataAssetManager` | Editor plugin | Adds a full Data Asset management window and supporting services. |
 | `OutlinerToolkit` | Editor plugin | Extends Scene Outliner with extra columns, filters, context actions, and audit tooling. |
 | `UNotepad` | Editor plugin | Adds a tabbed source/text editor directly inside the Unreal Editor. |
@@ -60,6 +62,69 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 - `AHUD`
 
 This plugin is useful when a project has a preferred set of base classes and the team wants a faster, cleaner way to create new gameplay C++ types.
+
+### ContentBrowserToolkit
+
+`ContentBrowserToolkit` extends the Unreal Content Browser with a large set of production-oriented front-end filters. The filters are designed for fast asset triage: most read `FAssetData` tags or Content Browser item attributes, while dependency-focused filters use cached Asset Registry queries.
+
+**Entry points**
+
+- Content Browser: `Filters -> Content Browser Toolkit`
+- Settings: `Project Settings -> Plugins -> Content Browser Toolkit`
+- Integrates with: Content Browser front-end filters and `IAssetRegistry`
+
+**General content filters**
+
+- Project, Engine, Plugin, Developer, and Localized content.
+- Assets with virtualized data.
+- Imported assets with source file metadata.
+- Imported assets with missing source files.
+- Imported assets whose source files live outside the project directory.
+- Primary and non-primary assets according to Asset Manager rules.
+- Large and tiny assets using configurable disk-size thresholds.
+- Naming checks for common prefix conventions, spaces, and lowercase starts.
+
+**Blueprint filters**
+
+- Blueprint-like assets, data-only Blueprints, and scripted Blueprints.
+- Blueprints with or without Blueprint-owned components.
+- Replicated Blueprints.
+- Blueprints with native parents or project Blueprint parents.
+- Blueprints implementing interfaces.
+- Blueprints with or without Find-in-Blueprints searchable data.
+- Blueprints missing description or category metadata.
+- Widget Blueprints and Animation Blueprints.
+
+**Asset-type filters**
+
+- Texture assets, Texture2D, Texture Cubes, render targets, and virtual textures.
+- Large textures, invalid texture sources, textures without mipmaps, and textures with power-of-two adjustment.
+- Materials, material instances, material functions, and material parameter collections.
+- Static Meshes, Skeletal Meshes, Skeletons, Physics Assets, and Nanite on/off Static Meshes.
+- High-triangle Static Meshes, meshes without collision, single-LOD meshes, complex-collision meshes, high material-slot meshes, and high UV-channel meshes.
+- Animation assets, Anim Sequences, Anim Montages, Blend Spaces, and Pose Assets.
+- Sound Waves, Sound Cues, MetaSounds, dialogue assets, looping audio, multichannel audio, low-sample-rate audio, low-quality audio, cloud-streaming audio, and mature audio.
+- Maps, Niagara Systems, Niagara Emitters, Data Assets, Data Tables, curve assets, User Defined Structs, and User Defined Enums.
+
+**Cached audit filters**
+
+- Assets with no referencers.
+- Assets with referencers.
+- Assets referenced by maps.
+- Assets with dependencies.
+- Assets referencing Engine, Project, or Plugin content.
+
+**Settings**
+
+- Large asset threshold in MB.
+- Tiny asset threshold in KB.
+- Large texture max-size threshold.
+- High triangle-count threshold.
+- Material slot and UV channel thresholds.
+- Low audio quality threshold.
+- Toggle for cached audit filters.
+
+This plugin is useful when the team wants Content Browser cleanup and review checks available directly from the standard filter menu without opening a separate audit window.
 
 ### DataAssetManager
 
@@ -367,11 +432,12 @@ ValidatorX is intended for editor-time quality gates, project cleanup, and revie
 
 ## Testing
 
-Each plugin has a dedicated automation test module:
+Most established plugins have a dedicated automation test module:
 
 | Plugin | Test module |
 | --- | --- |
 | `CppTemplateGenerator` | `CppTemplateGeneratorTests` |
+| `ContentBrowserToolkit` | Not added yet |
 | `DataAssetManager` | `DataAssetManagerTests` |
 | `OutlinerToolkit` | `OutlinerToolkitTests` |
 | `UNotepad` | `UNotepadTests` |
@@ -405,6 +471,7 @@ Other available plugin test filters:
 ToolsProject/
   Plugins/
     CppTemplateGenerator/
+    ContentBrowserToolkit/
     DataAssetManager/
     OutlinerToolkit/
     UNotepad/
