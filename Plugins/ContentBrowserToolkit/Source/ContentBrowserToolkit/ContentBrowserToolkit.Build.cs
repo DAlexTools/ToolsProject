@@ -1,3 +1,5 @@
+// Copyright 2025 DimAlek. All Rights Reserved.
+
 using UnrealBuildTool;
 
 public class ContentBrowserToolkit : ModuleRules

@@ -1,5 +1,6 @@
-#include "ContentBrowserToolkitFilterExtension.h"
+// Copyright 2025 DimAlek. All Rights Reserved.
 
+#include "ContentBrowserToolkitFilterExtension.h"
 #include "AssetRegistry/AssetData.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"

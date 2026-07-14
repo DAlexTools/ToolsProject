@@ -1,7 +1,8 @@
+// Copyright 2025 DimAlek. All Rights Reserved.
+
 #pragma once
 
 #include "ContentBrowserFrontEndFilterExtension.h"
-
 #include "ContentBrowserToolkitFilterExtension.generated.h"
 
 UCLASS()
