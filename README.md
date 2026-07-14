@@ -128,7 +128,7 @@ This plugin is useful when a project has a preferred set of base classes and the
 This plugin is useful when the team wants Content Browser cleanup and review checks available directly from the standard filter menu without opening a separate audit window.
 
 ### DataAssetManager
-
+![DataAssetManagerImage](Plugins/DataAssetManager/Resources/DataAssetManagerImage.gif)
 `DataAssetManager` is a dedicated editor window for browsing, inspecting, validating, and maintaining Data Assets. It is designed for projects with many Data Assets where the Content Browser alone is not enough for repeated cleanup and review workflows.
 
 **Entry points**
