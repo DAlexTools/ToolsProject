@@ -1,3 +1,5 @@
+// Copyright 2025 DimAlek. All Rights Reserved.
+
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
