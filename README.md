@@ -302,7 +302,7 @@ This plugin is useful when the team wants Content Browser cleanup and review che
 - Persistent ignored audit issue keys.
 
 ### UNotepad
-
+![UNotepadImage](Plugins/UNotepad/Resources/UNotepadImage.jpg)
 `UNotepad` is a dockable editor notepad for quick source and data-file editing without leaving Unreal Editor. It supports multiple document modes, tabs, split document groups, editor commands, and file operations backed by dedicated services.
 
 **Entry points**
@@ -378,7 +378,7 @@ Default source extensions:
 - `cs`
 
 ### ValidatorX
-
+![ValidatorXImage](Plugins/ValidatorX/Resources/ValidatorXImage.jpg)
 `ValidatorX` is an editor validation plugin built on top of Unreal's Data Validation system. It provides a Slate dashboard where validators can be searched, enabled, disabled, and managed without digging through engine settings.
 
 **Entry points**
