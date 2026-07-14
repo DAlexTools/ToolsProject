@@ -202,7 +202,7 @@ This plugin is useful when the team wants Content Browser cleanup and review che
 - Configure root UI color used by the tool.
 
 ### OutlinerToolkit
-
+![OutlinerToolkitImage](Plugins/OutlinerToolkit/Resources/OutlinerToolkitImage.jpg)
 `OutlinerToolkit` extends the Unreal Scene Outliner with practical production controls. It adds custom columns, custom filters, actor context menu actions, and a dedicated audit window for finding common level organization and performance issues.
 
 **Entry points**
