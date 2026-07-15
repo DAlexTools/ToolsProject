@@ -30,12 +30,12 @@ public:
 
 
 private:
-	TSharedRef<SDockTab> CreateNotepadManagerTab(const FSpawnTabArgs& Args);
+	[[nodiscard]] TSharedRef<SDockTab> CreateNotepadManagerTab(const FSpawnTabArgs& Args);
 	void RegisterMenus();
 	void AddContentBrowserOpenEntries(FToolMenuSection& Section);
 	void OpenContentBrowserSelectionInNotepad(TArray<FString> FilePaths);
 	TArray<FString> GetSupportedContentBrowserFilePaths(const FToolMenuSection& Section) const;
-	static bool IsSupportedSourceFilePath(const FString& FilePath);
+	[[nodiscard]] static bool IsSupportedSourceFilePath(const FString& FilePath);
 
 	TWeakPtr<SNotepadWidget> ActiveNotepadWidget;
 };
