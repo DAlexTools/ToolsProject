@@ -143,7 +143,6 @@ void FUNotepadModule::OpenContentBrowserSelectionInNotepad(TArray<FString> FileP
 TArray<FString> FUNotepadModule::GetSupportedContentBrowserFilePaths(const FToolMenuSection& Section) const
 {
 	TArray<FString> FilePaths;
-
 	const auto AddSupportedFilePath = [this, &FilePaths](FString FilePath)
 	{
 		if (FilePath.IsEmpty())
