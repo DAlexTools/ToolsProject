@@ -37,7 +37,7 @@ public:
  * Handles module initialization, editor integration, menu registration,
  * Content Browser extensions, and creation of the Notepad editor tab.
  */
-class UNOTEPAD_API FUNotepadModule : public IUNotepadModule
+class UNOTEPAD_API FUNotepadModule final : public IUNotepadModule
 {
 public:
 	/** Initializes the module and registers editor extensions. */
