@@ -107,7 +107,7 @@ TSharedRef<SDockTab> FUNotepadModule::CreateNotepadManagerTab(const FSpawnTabArg
 
 void FUNotepadModule::AddContentBrowserOpenEntries(FToolMenuSection& Section)
 {
-	TArray<FString> FilePaths = GetSupportedContentBrowserFilePaths(Section);
+	const TArray<FString> FilePaths = GetSupportedContentBrowserFilePaths(Section);
 	if (FilePaths.IsEmpty())
 	{
 		return;
@@ -187,7 +187,7 @@ TArray<FString> FUNotepadModule::GetSupportedContentBrowserFilePaths(const FTool
 			return;
 		}
 
-		UClass* SourceClass = Cast<UClass>(AssetData.FastGetAsset(false));
+		const UClass* SourceClass = Cast<UClass>(AssetData.FastGetAsset(false));
 		if (!SourceClass)
 		{
 			SourceClass = Cast<UClass>(AssetData.GetAsset());
