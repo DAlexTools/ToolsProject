@@ -1,4 +1,5 @@
 # ToolsProject
+![ToolsProjectImage](Docs/Images/ToolsProjectImage.jpg)
 
 ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, auditing Content Browser assets, managing Data Assets in bulk, packing texture channels, and running targeted content validation directly inside the Unreal Editor.
 

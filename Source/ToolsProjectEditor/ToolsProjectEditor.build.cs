@@ -16,6 +16,15 @@ public class ToolsProjectEditor : ModuleRules
         {
             PrivateDependencyModuleNames.Add("EditorScriptingUtilities");
             PrivateDependencyModuleNames.Add("UnrealEd");
+            PrivateDependencyModuleNames.AddRange(new string[]
+            {
+                "Slate",
+                "SlateCore",
+                "ToolMenus",
+                "DataAssetManager",
+                "OutlinerToolkit",
+                "TextureChannelPacker"
+            });
         }
 
 
