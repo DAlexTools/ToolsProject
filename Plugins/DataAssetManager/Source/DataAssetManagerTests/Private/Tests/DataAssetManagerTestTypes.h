@@ -35,6 +35,12 @@ public:
 	/** @brief Integer property used by tests that need editable asset data. */
 	UPROPERTY(EditDefaultsOnly)
 	int32 TestProperty = 0;
+
+	UPROPERTY(EditDefaultsOnly)
+	FLinearColor Color = FLinearColor::Red;
+
+	UPROPERTY(EditDefaultsOnly)
+	TArray<FLinearColor> Colors;
 };
 
 /**
