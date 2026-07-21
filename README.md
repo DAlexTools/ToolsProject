@@ -1,6 +1,6 @@
 # ToolsProject
 
-ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, auditing Content Browser assets, managing Data Assets in bulk, and running targeted content validation directly inside the Unreal Editor.
+ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, auditing Content Browser assets, managing Data Assets in bulk, packing texture channels, and running targeted content validation directly inside the Unreal Editor.
 
 ## Overview
 
@@ -10,6 +10,7 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 | Content Browser audit | `ContentBrowserToolkit` | A large Content Browser filter pack for asset source data, naming, Blueprints, textures, meshes, audio, maps, data assets, and cached dependency checks. |
 | Content management | `DataAssetManager` | A dedicated Data Asset browser with filtering, bulk operations, validation, diffing, reference inspection, and editor utilities. |
 | Scene organization | `OutlinerToolkit` | Scene Outliner columns, filters, actor batch actions, and a world audit panel. |
+| Texture processing | `TextureChannelPacker` | A focused texture channel packing window for pack, repack, unpack, and channel-copy workflows. |
 | Text editing | `UNotepad` | A dockable in-editor notepad for text, code, JSON, and CSV files. |
 | Content validation | `ValidatorX` | A Data Validation dashboard with switchable Blueprint and Material validators. |
 
@@ -29,6 +30,7 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 | `ContentBrowserToolkit` | Editor plugin | Adds custom Content Browser front-end filters and cached Asset Registry audit helpers. |
 | `DataAssetManager` | Editor plugin | Adds a full Data Asset management window and supporting services. |
 | `OutlinerToolkit` | Editor plugin | Extends Scene Outliner with extra columns, filters, context actions, and audit tooling. |
+| `TextureChannelPacker` | Editor plugin | Adds texture channel packing, repacking, unpacking, preview, and preset tooling. |
 | `UNotepad` | Editor plugin | Adds a tabbed source/text editor directly inside the Unreal Editor. |
 | `ValidatorX` | Editor plugin | Adds configurable validation tooling on top of Unreal's Data Validation system. |
 
@@ -301,6 +303,50 @@ This plugin is useful when the team wants Content Browser cleanup and review che
 - Per-criterion severity overrides.
 - Persistent ignored audit issue keys.
 
+### TextureChannelPacker
+![TextureChannelPacker](Plugins/TextureChannelPacker/Resources/TextureChannelPackerImage.jpg)
+`TextureChannelPacker` is a compact editor window for building packed mask textures from existing texture assets. It supports common RGB/A channel workflows such as ORM packing, packed texture repacking, single-channel unpacking, and copying channels into a new output texture.
+
+**Entry points**
+
+- Menu: `Tools -> Texture Packing -> Texture Channel Packer`
+- Window: fixed-size `Texture Channel Packer` editor window
+- Settings: `Project Settings -> Plugins -> Texture Channel Packer`
+- Integrates with: Content Browser texture selection, texture source data, package creation, and editor transactions
+
+**Operations**
+
+| Operation | Purpose |
+| --- | --- |
+| `Pack` | Combine channels from multiple source textures into one output texture. |
+| `Repack` | Rearrange channels from an existing packed texture into a new layout. |
+| `Unpack` | Extract selected channels into separate grayscale textures. |
+| `Copy Channels` | Copy selected channels into a new output texture. |
+
+**Channel workflow**
+
+- Map any source channel `R`, `G`, `B`, or `A` into any output channel.
+- Use a constant channel value when a target channel should be filled instead of sampled from a texture.
+- Apply selected Content Browser textures to the current preset and match them by naming patterns.
+- Generate output asset names from selected texture names and preset suffixes.
+- Preview the composite result or inspect individual `R`, `G`, `B`, and `A` channels before generating assets.
+- Save the current channel setup as a reusable project preset.
+
+**Output settings**
+
+- Choose an output package path and asset base name.
+- Use the first input texture size or specify a custom resolution.
+- Configure source format, compression, mip generation, texture filter, LOD group, sRGB, and virtual texture streaming.
+- Supported source formats include `Auto`, `G8`, `G16`, `R16F`, `R32F`, `BGRA8`, `RGBA16`, `RGBA16F`, and `RGBA32F`.
+
+**Default presets**
+
+| Preset | Operation | Output |
+| --- | --- | --- |
+| `Pack ORM` | `Pack` | Builds an `_ORM` mask with AO in `R`, roughness in `G`, metallic in `B`, and alpha filled to `255`. |
+| `Repack ORM to RMO` | `Repack` | Converts an existing `_ORM` texture into an `_RMO` channel layout. |
+| `Unpack ORM` | `Unpack` | Extracts `_AO`, `_R`, and `_M` grayscale outputs from an `_ORM` texture. |
+
 ### UNotepad
 ![UNotepadImage](Plugins/UNotepad/Resources/UNotepadImage.jpg)
 `UNotepad` is a dockable editor notepad for quick source and data-file editing without leaving Unreal Editor. It supports multiple document modes, tabs, split document groups, editor commands, and file operations backed by dedicated services.
@@ -442,6 +488,7 @@ Most established plugins have a dedicated automation test module:
 | `ContentBrowserToolkit` | Not added yet |
 | `DataAssetManager` | `DataAssetManagerTests` |
 | `OutlinerToolkit` | `OutlinerToolkitTests` |
+| `TextureChannelPacker` | Not added yet |
 | `UNotepad` | `UNotepadTests` |
 | `ValidatorX` | `ValidatorXTests` |
 
@@ -476,6 +523,7 @@ ToolsProject/
     ContentBrowserToolkit/
     DataAssetManager/
     OutlinerToolkit/
+    TextureChannelPacker/
     UNotepad/
     ValidatorX/
   Source/
