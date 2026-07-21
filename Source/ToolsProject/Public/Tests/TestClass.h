@@ -11,10 +11,6 @@ class TOOLSPROJECT_API TestClass
 {
 public:
 
-	TestClass(int32 a)
-	{
-	}
-	
 	TestClass();
 	~TestClass();
 };
