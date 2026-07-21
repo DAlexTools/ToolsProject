@@ -7,15 +7,21 @@
 
 class SWindow;
 
-class FTextureChannelPackerModule : public IModuleInterface
+class ITextureChannelPackerModule : public IModuleInterface
+{
+public:
+    virtual void OpenPluginWindow() = 0;
+};
+
+class FTextureChannelPackerModule : public ITextureChannelPackerModule
 {
 public:
     /** IModuleInterface implementation */
     virtual void StartupModule() override;
     virtual void ShutdownModule() override;
 
-private:
-    void OpenPluginWindow();
+    virtual void OpenPluginWindow() override;
 
+private:
     TWeakPtr<SWindow> ToolWindow;
 };

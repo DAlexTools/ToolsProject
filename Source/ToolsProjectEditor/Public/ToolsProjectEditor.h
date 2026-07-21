@@ -13,4 +13,10 @@ class FToolsProjectEditor : public IModuleInterface
 
 	/* Called when the module is unloaded */
 	virtual void ShutdownModule() override;
+
+private:
+	void RegisterMenus();
+	void OpenDataAssetManager();
+	void OpenOutlinerToolkitAudit();
+	void OpenTextureChannelPacker();
 };
