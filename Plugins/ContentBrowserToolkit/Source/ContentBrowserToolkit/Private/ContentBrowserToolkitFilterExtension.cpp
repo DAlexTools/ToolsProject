@@ -33,7 +33,6 @@ namespace ContentBrowserToolkit
 	struct FCachedPackageAudit
 	{
 		bool bHasReferencers = false;
-		bool bReferencedByMap = false;
 		bool bHasDependencies = false;
 		bool bReferencesEngineContent = false;
 		bool bReferencesPluginContent = false;
@@ -157,38 +156,9 @@ namespace ContentBrowserToolkit
 		return GetClassName(AssetData).ToString().Contains(Text, ESearchCase::IgnoreCase);
 	}
 
-	FString GetPackagePathString(const FAssetData& AssetData)
-	{
-		return AssetData.PackagePath.ToString();
-	}
-
-	bool PackagePathStartsWith(const FAssetData& AssetData, const TCHAR* Prefix)
-	{
-		return GetPackagePathString(AssetData).StartsWith(Prefix, ESearchCase::IgnoreCase);
-	}
-
 	bool PackageNameStartsWith(FName PackageName, const TCHAR* Prefix)
 	{
 		return PackageName.ToString().StartsWith(Prefix, ESearchCase::IgnoreCase);
-	}
-
-	bool IsProjectPackagePath(const FAssetData& AssetData)
-	{
-		return PackagePathStartsWith(AssetData, TEXT("/Game"));
-	}
-
-	bool IsEnginePackagePath(const FAssetData& AssetData)
-	{
-		return PackagePathStartsWith(AssetData, TEXT("/Engine"));
-	}
-
-	bool IsPluginPackagePath(const FAssetData& AssetData)
-	{
-		const FString PackagePath = GetPackagePathString(AssetData);
-		return PackagePath.StartsWith(TEXT("/"))
-			&& !PackagePath.StartsWith(TEXT("/Game"), ESearchCase::IgnoreCase)
-			&& !PackagePath.StartsWith(TEXT("/Engine"), ESearchCase::IgnoreCase)
-			&& !PackagePath.StartsWith(TEXT("/Script"), ESearchCase::IgnoreCase);
 	}
 
 	bool GetDiskSizeBytes(FAssetFilterType InItem, int64& OutDiskSizeBytes)
@@ -201,18 +171,6 @@ namespace ContentBrowserToolkit
 
 		OutDiskSizeBytes = DiskSizeValue.GetValue<int64>();
 		return true;
-	}
-
-	bool GetBoolItemAttribute(FAssetFilterType InItem, FName AttributeName)
-	{
-		const FContentBrowserItemDataAttributeValue AttributeValue = InItem.GetItemAttribute(AttributeName);
-		return AttributeValue.IsValid() && AttributeValue.GetValue<bool>();
-	}
-
-	bool GetVirtualizedDataAttribute(FAssetFilterType InItem)
-	{
-		const FContentBrowserItemDataAttributeValue AttributeValue = InItem.GetItemAttribute(ContentBrowserItemAttributes::VirtualizedData);
-		return AttributeValue.IsValid() && AttributeValue.GetValue<FString>().Equals(TEXT("True"), ESearchCase::IgnoreCase);
 	}
 
 	bool IsBlueprintAsset(const FAssetData& AssetData)
@@ -234,60 +192,6 @@ namespace ContentBrowserToolkit
 			TEXT("RuntimeVirtualTexture"),
 			TEXT("SparseVolumeTexture")
 		});
-	}
-
-	bool IsMaterialAsset(const FAssetData& AssetData)
-	{
-		return IsAnyClass(AssetData, {
-			TEXT("Material"),
-			TEXT("MaterialInstance"),
-			TEXT("MaterialInstanceConstant"),
-			TEXT("MaterialFunction"),
-			TEXT("MaterialFunctionInstance"),
-			TEXT("MaterialParameterCollection")
-		});
-	}
-
-	bool IsAudioAsset(const FAssetData& AssetData)
-	{
-		return IsAnyClass(AssetData, {
-			TEXT("SoundWave"),
-			TEXT("SoundCue"),
-			TEXT("MetaSoundSource"),
-			TEXT("MetaSoundPatch"),
-			TEXT("SoundClass"),
-			TEXT("SoundMix"),
-			TEXT("DialogueWave"),
-			TEXT("DialogueVoice")
-		});
-	}
-
-	bool IsAnimationAsset(const FAssetData& AssetData)
-	{
-		return IsAnyClass(AssetData, {
-			TEXT("AnimSequence"),
-			TEXT("AnimMontage"),
-			TEXT("BlendSpace"),
-			TEXT("BlendSpace1D"),
-			TEXT("AimOffsetBlendSpace"),
-			TEXT("PoseAsset"),
-			TEXT("AnimBlueprint")
-		});
-	}
-
-	bool IsDataLikeAsset(const FAssetData& AssetData)
-	{
-		return IsAnyClass(AssetData, {
-			TEXT("DataAsset"),
-			TEXT("PrimaryDataAsset"),
-			TEXT("DataTable"),
-			TEXT("CurveTable"),
-			TEXT("CurveFloat"),
-			TEXT("CurveVector"),
-			TEXT("CurveLinearColor"),
-			TEXT("UserDefinedStruct"),
-			TEXT("UserDefinedEnum")
-		}) || ClassContains(AssetData, TEXT("DataAsset"));
 	}
 
 	bool IsMeaningfulBlueprintListTag(const FAssetData& AssetData, FName TagName)
@@ -487,25 +391,6 @@ namespace ContentBrowserToolkit
 		return FirstChar >= TCHAR('a') && FirstChar <= TCHAR('z');
 	}
 
-	bool IsWorldPackage(IAssetRegistry& AssetRegistry, FName PackageName)
-	{
-		TArray<FAssetData> PackageAssets;
-		if (!AssetRegistry.GetAssetsByPackageName(PackageName, PackageAssets))
-		{
-			return false;
-		}
-
-		for (const FAssetData& PackageAsset : PackageAssets)
-		{
-			if (IsClass(PackageAsset, TEXT("World")))
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	class FAssetAuditCache
 	{
 	public:
@@ -548,7 +433,6 @@ namespace ContentBrowserToolkit
 				}
 
 				Audit.bHasReferencers = true;
-				Audit.bReferencedByMap = Audit.bReferencedByMap || IsWorldPackage(AssetRegistry, Referencer);
 			}
 
 			TArray<FName> Dependencies;
@@ -621,13 +505,6 @@ namespace ContentBrowserToolkit
 		const FLinearColor WarningColor(0.9f, 0.25f, 0.2f);
 		const FLinearColor NamingColor(0.75f, 0.55f, 0.15f);
 
-		AddAssetDataFilter(Specs, TEXT("CBTK_ProjectContent"), LOCTEXT("ProjectContentName", "Project Content"), LOCTEXT("ProjectContentTooltip", "Show assets under /Game."), GeneralColor, [](const FAssetData& AssetData) { return IsProjectPackagePath(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_EngineContent"), LOCTEXT("EngineContentName", "Engine Content"), LOCTEXT("EngineContentTooltip", "Show assets under /Engine."), GeneralColor, [](const FAssetData& AssetData) { return IsEnginePackagePath(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_PluginContent"), LOCTEXT("PluginContentName", "Plugin Content"), LOCTEXT("PluginContentTooltip", "Show assets under plugin mount points."), GeneralColor, [](const FAssetData& AssetData) { return IsPluginPackagePath(AssetData); });
-		AddFilter(Specs, TEXT("CBTK_DeveloperContent"), LOCTEXT("DeveloperContentName", "Developer Content"), LOCTEXT("DeveloperContentTooltip", "Show assets marked as developer content."), GeneralColor, [](FAssetFilterType InItem) { return GetBoolItemAttribute(InItem, ContentBrowserItemAttributes::ItemIsDeveloperContent); });
-		AddFilter(Specs, TEXT("CBTK_LocalizedContent"), LOCTEXT("LocalizedContentName", "Localized Content"), LOCTEXT("LocalizedContentTooltip", "Show assets marked as localized content."), GeneralColor, [](FAssetFilterType InItem) { return GetBoolItemAttribute(InItem, ContentBrowserItemAttributes::ItemIsLocalizedContent); });
-		AddFilter(Specs, TEXT("CBTK_VirtualizedData"), LOCTEXT("VirtualizedDataName", "Virtualized Data"), LOCTEXT("VirtualizedDataTooltip", "Show assets with virtualized bulk data."), GeneralColor, [](FAssetFilterType InItem) { return GetVirtualizedDataAttribute(InItem); });
-
 		AddAssetDataFilter(Specs, TEXT("CBTK_ImportedAssets"), LOCTEXT("ImportedAssetsName", "Imported Assets"), LOCTEXT("ImportedAssetsTooltip", "Show assets that keep source file import data and can usually be reimported."), GeneralColor, [](const FAssetData& AssetData) { return HasNonEmptyTag(AssetData, UObject::SourceFileTagName()); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_MissingSourceFile"), LOCTEXT("MissingSourceFileName", "Missing Source File"), LOCTEXT("MissingSourceFileTooltip", "Show imported assets whose source file path no longer exists on disk."), WarningColor, [](const FAssetData& AssetData) { return HasMissingSourceFile(AssetData); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_SourceOutsideProject"), LOCTEXT("SourceOutsideProjectName", "Source Outside Project"), LOCTEXT("SourceOutsideProjectTooltip", "Show imported assets whose source files live outside the project directory."), NamingColor, [](const FAssetData& AssetData) { return HasSourceOutsideProject(AssetData); });
@@ -669,12 +546,10 @@ namespace ContentBrowserToolkit
 		const FLinearColor BlueprintColor(0.55f, 0.45f, 0.95f);
 		const FLinearColor WarningColor(0.9f, 0.25f, 0.2f);
 
-		AddAssetDataFilter(Specs, TEXT("CBTK_AllBlueprints"), LOCTEXT("AllBlueprintsName", "Blueprint Assets"), LOCTEXT("AllBlueprintsTooltip", "Show Blueprint-like assets detected by class name or Blueprint asset registry tags."), BlueprintColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_DataOnlyBlueprints"), LOCTEXT("DataOnlyBlueprintsName", "Data-Only Blueprints"), LOCTEXT("DataOnlyBlueprintsTooltip", "Show Blueprint assets whose asset registry tags mark them as data-only."), BlueprintColor, [](const FAssetData& AssetData) { bool bIsDataOnly = false; return IsBlueprintAsset(AssetData) && GetBoolTag(AssetData, FBlueprintTags::IsDataOnly, bIsDataOnly) && bIsDataOnly; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_ScriptedBlueprints"), LOCTEXT("ScriptedBlueprintsName", "Scripted Blueprints"), LOCTEXT("ScriptedBlueprintsTooltip", "Show Blueprint assets whose data-only tag is false."), BlueprintColor, [](const FAssetData& AssetData) { bool bIsDataOnly = false; return IsBlueprintAsset(AssetData) && GetBoolTag(AssetData, FBlueprintTags::IsDataOnly, bIsDataOnly) && !bIsDataOnly; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintsWithComponents"), LOCTEXT("BlueprintsWithComponentsName", "Blueprints With Components"), LOCTEXT("BlueprintsWithComponentsTooltip", "Show Blueprint assets that add at least one Blueprint-owned component."), BlueprintColor, [](const FAssetData& AssetData) { return AssetData.GetTagValueRef<int32>(FBlueprintTags::NumBlueprintComponents) > 0; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintsWithoutComponents"), LOCTEXT("BlueprintsWithoutComponentsName", "Blueprints Without Components"), LOCTEXT("BlueprintsWithoutComponentsTooltip", "Show Blueprint assets that have no Blueprint-owned components."), BlueprintColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData) && AssetData.GetTagValueRef<int32>(FBlueprintTags::NumBlueprintComponents) == 0; });
-		AddAssetDataFilter(Specs, TEXT("CBTK_ReplicatedBlueprints"), LOCTEXT("ReplicatedBlueprintsName", "Replicated Blueprints"), LOCTEXT("ReplicatedBlueprintsTooltip", "Show Blueprints with replicated properties."), BlueprintColor, [](const FAssetData& AssetData) { return AssetData.GetTagValueRef<int32>(FBlueprintTags::NumReplicatedProperties) > 0; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintNativeParent"), LOCTEXT("BlueprintNativeParentName", "Blueprint Has Native Parent"), LOCTEXT("BlueprintNativeParentTooltip", "Show Blueprints with a native parent class path tag."), BlueprintColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData) && HasNonEmptyTag(AssetData, FBlueprintTags::NativeParentClassPath); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintProjectParent"), LOCTEXT("BlueprintProjectParentName", "Blueprint Has Project Parent"), LOCTEXT("BlueprintProjectParentTooltip", "Show Blueprints whose parent class path points into /Game."), BlueprintColor, [](const FAssetData& AssetData) { FString ParentClassPath; return IsBlueprintAsset(AssetData) && GetStringTag(AssetData, FBlueprintTags::ParentClassPath, ParentClassPath) && ParentClassPath.Contains(TEXT("/Game/")); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintInterfaces"), LOCTEXT("BlueprintInterfacesName", "Blueprint Has Interfaces"), LOCTEXT("BlueprintInterfacesTooltip", "Show Blueprints with implemented interface data in asset registry tags."), BlueprintColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData) && IsMeaningfulBlueprintListTag(AssetData, FBlueprintTags::ImplementedInterfaces); });
@@ -682,8 +557,6 @@ namespace ContentBrowserToolkit
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintMissingFindInBlueprintsData"), LOCTEXT("BlueprintMissingFibDataName", "Blueprint Missing FiB Data"), LOCTEXT("BlueprintMissingFibDataTooltip", "Show Blueprints without Find-in-Blueprints searchable data."), WarningColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData) && !HasNonEmptyTag(AssetData, FBlueprintTags::FindInBlueprintsData); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintMissingDescription"), LOCTEXT("BlueprintMissingDescriptionName", "Blueprint Missing Description"), LOCTEXT("BlueprintMissingDescriptionTooltip", "Show Blueprints without a Blueprint description tag."), WarningColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData) && !HasNonEmptyTag(AssetData, FBlueprintTags::BlueprintDescription); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_BlueprintMissingCategory"), LOCTEXT("BlueprintMissingCategoryName", "Blueprint Missing Category"), LOCTEXT("BlueprintMissingCategoryTooltip", "Show Blueprints without a Blueprint category tag."), WarningColor, [](const FAssetData& AssetData) { return IsBlueprintAsset(AssetData) && !HasNonEmptyTag(AssetData, FBlueprintTags::BlueprintCategory); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_WidgetBlueprints"), LOCTEXT("WidgetBlueprintsName", "Widget Blueprints"), LOCTEXT("WidgetBlueprintsTooltip", "Show Widget Blueprint assets."), BlueprintColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("WidgetBlueprint")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_AnimBlueprints"), LOCTEXT("AnimBlueprintsName", "Anim Blueprints"), LOCTEXT("AnimBlueprintsTooltip", "Show Animation Blueprint assets."), BlueprintColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("AnimBlueprint")); });
 	}
 
 	void AddTextureFilters(TArray<FFilterSpec>& Specs)
@@ -692,11 +565,6 @@ namespace ContentBrowserToolkit
 		const FLinearColor TextureColor(0.15f, 0.65f, 0.85f);
 		const FLinearColor WarningColor(0.9f, 0.25f, 0.2f);
 
-		AddAssetDataFilter(Specs, TEXT("CBTK_TextureAssets"), LOCTEXT("TextureAssetsName", "Texture Assets"), LOCTEXT("TextureAssetsTooltip", "Show texture and render-target assets."), TextureColor, [](const FAssetData& AssetData) { return IsTextureAsset(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_Texture2D"), LOCTEXT("Texture2DName", "Texture2D"), LOCTEXT("Texture2DTooltip", "Show Texture2D assets."), TextureColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("Texture2D")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_TextureCubes"), LOCTEXT("TextureCubesName", "Texture Cubes"), LOCTEXT("TextureCubesTooltip", "Show TextureCube assets."), TextureColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("TextureCube")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_RenderTargets"), LOCTEXT("RenderTargetsName", "Render Targets"), LOCTEXT("RenderTargetsTooltip", "Show texture render target assets."), TextureColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("TextureRenderTarget2D"), TEXT("TextureRenderTargetCube") }); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_VirtualTextures"), LOCTEXT("VirtualTexturesName", "Virtual Textures"), LOCTEXT("VirtualTexturesTooltip", "Show Runtime Virtual Texture and virtual-volume texture assets."), TextureColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("RuntimeVirtualTexture"), TEXT("SparseVolumeTexture") }); });
 		AddAssetDataFilter(
 			Specs,
 			TEXT("CBTK_LargeTextures"),
@@ -713,27 +581,12 @@ namespace ContentBrowserToolkit
 		AddAssetDataFilter(Specs, TEXT("CBTK_TexturePowerOfTwoAdjusted"), LOCTEXT("TexturePowerOfTwoAdjustedName", "Power-of-Two Adjusted"), LOCTEXT("TexturePowerOfTwoAdjustedTooltip", "Show textures with a PowerOfTwoMode other than None."), TextureColor, [](const FAssetData& AssetData) { FString PowerOfTwoMode; return IsTextureAsset(AssetData) && GetStringTag(AssetData, TEXT("PowerOfTwoMode"), PowerOfTwoMode) && HasMeaningfulTagValue(PowerOfTwoMode) && !PowerOfTwoMode.Contains(TEXT("None"), ESearchCase::IgnoreCase); });
 	}
 
-	void AddMaterialFilters(TArray<FFilterSpec>& Specs)
-	{
-		const FLinearColor MaterialColor(0.95f, 0.55f, 0.15f);
-
-		AddAssetDataFilter(Specs, TEXT("CBTK_MaterialAssets"), LOCTEXT("MaterialAssetsName", "Material Assets"), LOCTEXT("MaterialAssetsTooltip", "Show materials, material instances, functions, and parameter collections."), MaterialColor, [](const FAssetData& AssetData) { return IsMaterialAsset(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_Materials"), LOCTEXT("MaterialsName", "Materials"), LOCTEXT("MaterialsTooltip", "Show Material assets."), MaterialColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("Material")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_MaterialInstances"), LOCTEXT("MaterialInstancesName", "Material Instances"), LOCTEXT("MaterialInstancesTooltip", "Show Material Instance assets."), MaterialColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("MaterialInstance"), TEXT("MaterialInstanceConstant") }); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_MaterialFunctions"), LOCTEXT("MaterialFunctionsName", "Material Functions"), LOCTEXT("MaterialFunctionsTooltip", "Show Material Function assets."), MaterialColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("MaterialFunction"), TEXT("MaterialFunctionInstance") }); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_MaterialParameterCollections"), LOCTEXT("MaterialParameterCollectionsName", "Material Parameter Collections"), LOCTEXT("MaterialParameterCollectionsTooltip", "Show Material Parameter Collection assets."), MaterialColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("MaterialParameterCollection")); });
-	}
-
 	void AddMeshAndAnimationFilters(TArray<FFilterSpec>& Specs)
 	{
 		const UContentBrowserToolkitSettings& Settings = *UContentBrowserToolkitSettings::Get();
 		const FLinearColor MeshColor(0.35f, 0.75f, 0.35f);
 		const FLinearColor WarningColor(0.9f, 0.25f, 0.2f);
 
-		AddAssetDataFilter(Specs, TEXT("CBTK_StaticMeshes"), LOCTEXT("StaticMeshesName", "Static Meshes"), LOCTEXT("StaticMeshesTooltip", "Show Static Mesh assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("StaticMesh")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_SkeletalMeshes"), LOCTEXT("SkeletalMeshesName", "Skeletal Meshes"), LOCTEXT("SkeletalMeshesTooltip", "Show Skeletal Mesh assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("SkeletalMesh")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_Skeletons"), LOCTEXT("SkeletonsName", "Skeletons"), LOCTEXT("SkeletonsTooltip", "Show Skeleton assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("Skeleton")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_PhysicsAssets"), LOCTEXT("PhysicsAssetsName", "Physics Assets"), LOCTEXT("PhysicsAssetsTooltip", "Show Physics Asset assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("PhysicsAsset")); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_NaniteEnabled"), LOCTEXT("NaniteEnabledName", "Nanite Enabled"), LOCTEXT("NaniteEnabledTooltip", "Show Static Meshes whose NaniteEnabled tag is true."), MeshColor, [](const FAssetData& AssetData) { bool bNaniteEnabled = false; return IsClass(AssetData, TEXT("StaticMesh")) && GetBoolTag(AssetData, TEXT("NaniteEnabled"), bNaniteEnabled) && bNaniteEnabled; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_NaniteDisabled"), LOCTEXT("NaniteDisabledName", "Nanite Disabled"), LOCTEXT("NaniteDisabledTooltip", "Show Static Meshes whose NaniteEnabled tag is false."), WarningColor, [](const FAssetData& AssetData) { bool bNaniteEnabled = false; return IsClass(AssetData, TEXT("StaticMesh")) && GetBoolTag(AssetData, TEXT("NaniteEnabled"), bNaniteEnabled) && !bNaniteEnabled; });
 		AddAssetDataFilter(
@@ -772,12 +625,6 @@ namespace ContentBrowserToolkit
 				return IsClass(AssetData, TEXT("StaticMesh")) && GetIntTag(AssetData, TEXT("UVChannels"), UVChannels) && UVChannels > Threshold;
 			});
 		AddAssetDataFilter(Specs, TEXT("CBTK_ComplexCollisionMeshes"), LOCTEXT("ComplexCollisionMeshesName", "Complex Collision Meshes"), LOCTEXT("ComplexCollisionMeshesTooltip", "Show Static Meshes whose CollisionComplexity tag contains UseComplexAsSimple."), WarningColor, [](const FAssetData& AssetData) { FString CollisionComplexity; return IsClass(AssetData, TEXT("StaticMesh")) && GetStringTag(AssetData, TEXT("CollisionComplexity"), CollisionComplexity) && CollisionComplexity.Contains(TEXT("UseComplexAsSimple"), ESearchCase::IgnoreCase); });
-
-		AddAssetDataFilter(Specs, TEXT("CBTK_AnimationAssets"), LOCTEXT("AnimationAssetsName", "Animation Assets"), LOCTEXT("AnimationAssetsTooltip", "Show common animation asset classes."), MeshColor, [](const FAssetData& AssetData) { return IsAnimationAsset(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_AnimSequences"), LOCTEXT("AnimSequencesName", "Anim Sequences"), LOCTEXT("AnimSequencesTooltip", "Show AnimSequence assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("AnimSequence")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_AnimMontages"), LOCTEXT("AnimMontagesName", "Anim Montages"), LOCTEXT("AnimMontagesTooltip", "Show AnimMontage assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("AnimMontage")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_BlendSpaces"), LOCTEXT("BlendSpacesName", "Blend Spaces"), LOCTEXT("BlendSpacesTooltip", "Show BlendSpace and BlendSpace1D assets."), MeshColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("BlendSpace"), TEXT("BlendSpace1D"), TEXT("AimOffsetBlendSpace") }); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_PoseAssets"), LOCTEXT("PoseAssetsName", "Pose Assets"), LOCTEXT("PoseAssetsTooltip", "Show PoseAsset assets."), MeshColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("PoseAsset")); });
 	}
 
 	void AddAudioFilters(TArray<FFilterSpec>& Specs)
@@ -786,11 +633,6 @@ namespace ContentBrowserToolkit
 		const FLinearColor AudioColor(0.1f, 0.7f, 0.55f);
 		const FLinearColor WarningColor(0.9f, 0.25f, 0.2f);
 
-		AddAssetDataFilter(Specs, TEXT("CBTK_AudioAssets"), LOCTEXT("AudioAssetsName", "Audio Assets"), LOCTEXT("AudioAssetsTooltip", "Show sound, MetaSound, dialogue, class, and mix assets."), AudioColor, [](const FAssetData& AssetData) { return IsAudioAsset(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_SoundWaves"), LOCTEXT("SoundWavesName", "Sound Waves"), LOCTEXT("SoundWavesTooltip", "Show SoundWave assets."), AudioColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("SoundWave")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_SoundCues"), LOCTEXT("SoundCuesName", "Sound Cues"), LOCTEXT("SoundCuesTooltip", "Show SoundCue assets."), AudioColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("SoundCue")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_MetaSounds"), LOCTEXT("MetaSoundsName", "MetaSounds"), LOCTEXT("MetaSoundsTooltip", "Show MetaSound Source and Patch assets."), AudioColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("MetaSoundSource"), TEXT("MetaSoundPatch") }); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_DialogueAudio"), LOCTEXT("DialogueAudioName", "Dialogue Audio"), LOCTEXT("DialogueAudioTooltip", "Show DialogueWave and DialogueVoice assets."), AudioColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("DialogueWave"), TEXT("DialogueVoice") }); });
 		AddAssetDataFilter(Specs, TEXT("CBTK_LoopingSoundWaves"), LOCTEXT("LoopingSoundWavesName", "Looping SoundWaves"), LOCTEXT("LoopingSoundWavesTooltip", "Show SoundWave assets whose bLooping tag is true."), AudioColor, [](const FAssetData& AssetData) { bool bLooping = false; return IsClass(AssetData, TEXT("SoundWave")) && GetBoolTag(AssetData, TEXT("bLooping"), bLooping) && bLooping; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_MultichannelSoundWaves"), LOCTEXT("MultichannelSoundWavesName", "Multichannel SoundWaves"), LOCTEXT("MultichannelSoundWavesTooltip", "Show SoundWave assets with NumChannels greater than two."), WarningColor, [](const FAssetData& AssetData) { int64 NumChannels = 0; return IsClass(AssetData, TEXT("SoundWave")) && GetIntTag(AssetData, TEXT("NumChannels"), NumChannels) && NumChannels > 2; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_LowSampleRateSoundWaves"), LOCTEXT("LowSampleRateSoundWavesName", "Low Sample Rate SoundWaves"), LOCTEXT("LowSampleRateSoundWavesTooltip", "Show SoundWave assets with SampleRate at or below 22050."), WarningColor, [](const FAssetData& AssetData) { int64 SampleRate = 0; return IsClass(AssetData, TEXT("SoundWave")) && GetIntTag(AssetData, TEXT("SampleRate"), SampleRate) && SampleRate > 0 && SampleRate <= 22050; });
@@ -809,21 +651,6 @@ namespace ContentBrowserToolkit
 		AddAssetDataFilter(Specs, TEXT("CBTK_MatureAudio"), LOCTEXT("MatureAudioName", "Mature Audio"), LOCTEXT("MatureAudioTooltip", "Show SoundWave assets marked as mature."), WarningColor, [](const FAssetData& AssetData) { bool bMature = false; return IsClass(AssetData, TEXT("SoundWave")) && GetBoolTag(AssetData, TEXT("bMature"), bMature) && bMature; });
 	}
 
-	void AddMapFxAndDataFilters(TArray<FFilterSpec>& Specs)
-	{
-		const FLinearColor FxColor(0.75f, 0.35f, 0.85f);
-		const FLinearColor DataColor(0.2f, 0.65f, 0.5f);
-
-		AddAssetDataFilter(Specs, TEXT("CBTK_Maps"), LOCTEXT("MapsName", "Maps"), LOCTEXT("MapsTooltip", "Show World/map assets."), FxColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("World")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_NiagaraSystems"), LOCTEXT("NiagaraSystemsName", "Niagara Systems"), LOCTEXT("NiagaraSystemsTooltip", "Show Niagara System assets."), FxColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("NiagaraSystem")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_NiagaraEmitters"), LOCTEXT("NiagaraEmittersName", "Niagara Emitters"), LOCTEXT("NiagaraEmittersTooltip", "Show Niagara Emitter assets."), FxColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("NiagaraEmitter")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_DataLikeAssets"), LOCTEXT("DataLikeAssetsName", "Data-Like Assets"), LOCTEXT("DataLikeAssetsTooltip", "Show common data asset, table, curve, struct, and enum classes."), DataColor, [](const FAssetData& AssetData) { return IsDataLikeAsset(AssetData); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_DataAssets"), LOCTEXT("DataAssetsName", "Data Assets"), LOCTEXT("DataAssetsTooltip", "Show DataAsset and PrimaryDataAsset assets."), DataColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("DataAsset"), TEXT("PrimaryDataAsset") }) || ClassContains(AssetData, TEXT("DataAsset")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_DataTables"), LOCTEXT("DataTablesName", "Data Tables"), LOCTEXT("DataTablesTooltip", "Show DataTable assets."), DataColor, [](const FAssetData& AssetData) { return IsClass(AssetData, TEXT("DataTable")); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_CurveAssets"), LOCTEXT("CurveAssetsName", "Curve Assets"), LOCTEXT("CurveAssetsTooltip", "Show CurveTable and common curve assets."), DataColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("CurveTable"), TEXT("CurveFloat"), TEXT("CurveVector"), TEXT("CurveLinearColor") }); });
-		AddAssetDataFilter(Specs, TEXT("CBTK_UserDefinedTypes"), LOCTEXT("UserDefinedTypesName", "User Defined Types"), LOCTEXT("UserDefinedTypesTooltip", "Show UserDefinedStruct and UserDefinedEnum assets."), DataColor, [](const FAssetData& AssetData) { return IsAnyClass(AssetData, { TEXT("UserDefinedStruct"), TEXT("UserDefinedEnum") }); });
-	}
-
 	void AddCachedAuditFilters(TArray<FFilterSpec>& Specs)
 	{
 		if (!UContentBrowserToolkitSettings::Get()->bEnableCachedAuditFilters)
@@ -831,12 +658,9 @@ namespace ContentBrowserToolkit
 			return;
 		}
 
-		const FLinearColor AuditColor(0.9f, 0.35f, 0.25f);
 		const FLinearColor DependencyColor(0.55f, 0.55f, 0.9f);
 
-		AddAssetDataFilter(Specs, TEXT("CBTK_AuditNoReferencers"), LOCTEXT("AuditNoReferencersName", "Audit: No Referencers"), LOCTEXT("AuditNoReferencersTooltip", "Show assets with no package referencers according to the cached AssetRegistry query."), AuditColor, [](const FAssetData& AssetData) { return !FAssetAuditCache::Get().GetAudit(AssetData).bHasReferencers; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_AuditHasReferencers"), LOCTEXT("AuditHasReferencersName", "Audit: Has Referencers"), LOCTEXT("AuditHasReferencersTooltip", "Show assets with at least one package referencer according to the cached AssetRegistry query."), DependencyColor, [](const FAssetData& AssetData) { return FAssetAuditCache::Get().GetAudit(AssetData).bHasReferencers; });
-		AddAssetDataFilter(Specs, TEXT("CBTK_AuditReferencedByMap"), LOCTEXT("AuditReferencedByMapName", "Audit: Referenced By Map"), LOCTEXT("AuditReferencedByMapTooltip", "Show assets referenced by at least one World package according to cached AssetRegistry queries."), DependencyColor, [](const FAssetData& AssetData) { return FAssetAuditCache::Get().GetAudit(AssetData).bReferencedByMap; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_AuditHasDependencies"), LOCTEXT("AuditHasDependenciesName", "Audit: Has Dependencies"), LOCTEXT("AuditHasDependenciesTooltip", "Show assets that reference at least one other package according to cached AssetRegistry queries."), DependencyColor, [](const FAssetData& AssetData) { return FAssetAuditCache::Get().GetAudit(AssetData).bHasDependencies; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_AuditReferencesEngine"), LOCTEXT("AuditReferencesEngineName", "Audit: References Engine"), LOCTEXT("AuditReferencesEngineTooltip", "Show assets with dependencies under /Engine."), DependencyColor, [](const FAssetData& AssetData) { return FAssetAuditCache::Get().GetAudit(AssetData).bReferencesEngineContent; });
 		AddAssetDataFilter(Specs, TEXT("CBTK_AuditReferencesProject"), LOCTEXT("AuditReferencesProjectName", "Audit: References Project"), LOCTEXT("AuditReferencesProjectTooltip", "Show assets with dependencies under /Game."), DependencyColor, [](const FAssetData& AssetData) { return FAssetAuditCache::Get().GetAudit(AssetData).bReferencesProjectContent; });
@@ -848,10 +672,8 @@ namespace ContentBrowserToolkit
 		AddGeneralFilters(Specs);
 		AddBlueprintFilters(Specs);
 		AddTextureFilters(Specs);
-		AddMaterialFilters(Specs);
 		AddMeshAndAnimationFilters(Specs);
 		AddAudioFilters(Specs);
-		AddMapFxAndDataFilters(Specs);
 		AddCachedAuditFilters(Specs);
 	}
 }

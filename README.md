@@ -68,7 +68,7 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 This plugin is useful when a project has a preferred set of base classes and the team wants a faster, cleaner way to create new gameplay C++ types.
 
 ### ContentBrowserToolkit
-
+![ContentBrowserToolkitImage](Plugins/ContentBrowserToolkit/Resources/ContentBrowserToolkitImage.jpg)
 `ContentBrowserToolkit` extends the Unreal Content Browser with a large set of production-oriented front-end filters. The filters are designed for fast asset triage: most read `FAssetData` tags or Content Browser item attributes, while dependency-focused filters use cached Asset Registry queries.
 
 **Entry points**
