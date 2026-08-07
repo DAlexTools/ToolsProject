@@ -60,11 +60,7 @@ bool FValidatorXNodeUtilityNullCasesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FValidatorXNodeUtilityCommentAndExecPinsTest,
-	"ValidatorX.Utils.Node.CommentAndExecPins",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
+IMPLEMENT_SIMPLE_AUTOMATION_TEST( FValidatorXNodeUtilityCommentAndExecPinsTest, "ValidatorX.Utils.Node.CommentAndExecPins", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FValidatorXNodeUtilityCommentAndExecPinsTest::RunTest(const FString& Parameters)
 {
 	using namespace ValidatorX::Tests;
@@ -98,11 +94,7 @@ bool FValidatorXNodeUtilityCommentAndExecPinsTest::RunTest(const FString& Parame
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FValidatorXNodeUtilityGraphTypesTest,
-	"ValidatorX.Utils.Node.GraphTypes",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
+IMPLEMENT_SIMPLE_AUTOMATION_TEST( FValidatorXNodeUtilityGraphTypesTest, "ValidatorX.Utils.Node.GraphTypes", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FValidatorXNodeUtilityGraphTypesTest::RunTest(const FString& Parameters)
 {
 	using namespace ValidatorX::Tests;
@@ -125,11 +117,8 @@ bool FValidatorXNodeUtilityGraphTypesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FValidatorXNodeUtilityVariableNodesTest,
-	"ValidatorX.Utils.Node.VariableNodes",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST( FValidatorXNodeUtilityVariableNodesTest, "ValidatorX.Utils.Node.VariableNodes", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FValidatorXNodeUtilityVariableNodesTest::RunTest(const FString& Parameters)
 {
 	using namespace ValidatorX::Tests;
