@@ -25,7 +25,7 @@ void FDataAssetManagerFunctionLibraryTest::GetTests(TArray<FString>& OutBeautifi
 {
 	OutBeautifiedNames.Add(TEXT("PathUtils.GetDevelopersPath"));
 	OutTestCommands.Add(TEXT("GetDevelopersPath"));
-
+	
 	OutBeautifiedNames.Add(TEXT("PathUtils.GetRootPath"));
 	OutTestCommands.Add(TEXT("GetRootPath"));
 
