@@ -308,7 +308,7 @@ This plugin is useful when the team wants Content Browser cleanup and review che
 - Persistent ignored audit issue keys.
 
 ### PerformanceInspector
-![PerformanceInspectorIcon](Plugins/PerformanceInspector/PerformanceInspector/Resources/Icon128.png)
+![PerformanceInspectorIcon](Plugins/PerformanceInspector/PerformanceInspector/Resources/PIImage.jpg)
 
 `PerformanceInspector` provides runtime and editor-side performance capture tools. It can monitor live `stat unit` style timing data in a Slate panel, record capture sessions, add gameplay or automation markers, export reports, and evaluate sessions against performance thresholds for PIE or command-line automation.
 
