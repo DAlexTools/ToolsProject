@@ -1,7 +1,7 @@
 # ToolsProject
 ![ToolsProjectImage](Docs/Images/ToolsProjectImage.jpg)
 
-ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, auditing Content Browser assets, managing Data Assets in bulk, packing texture channels, and running targeted content validation directly inside the Unreal Editor.
+ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around standalone Slate-based plugins. The project focuses on everyday editor productivity: creating C++ classes faster, auditing Content Browser assets, managing Data Assets in bulk, inspecting runtime performance captures, packing texture channels, and running targeted content validation directly inside the Unreal Editor.
 
 ## Overview
 
@@ -11,6 +11,7 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 | Content Browser audit | `ContentBrowserToolkit` | A large Content Browser filter pack for asset source data, naming, Blueprints, textures, meshes, audio, maps, data assets, and cached dependency checks. |
 | Content management | `DataAssetManager` | A dedicated Data Asset browser with filtering, bulk operations, validation, diffing, reference inspection, and editor utilities. |
 | Scene organization | `OutlinerToolkit` | Scene Outliner columns, filters, actor batch actions, and a world audit panel. |
+| Performance capture | `PerformanceInspector` | A live performance graph, runtime capture subsystem, Blueprint API, event markers, exported reports, and threshold checks for PIE or command-line runs. |
 | Texture processing | `TextureChannelPacker` | A focused texture channel packing window for pack, repack, unpack, and channel-copy workflows. |
 | Text editing | `UNotepad` | A dockable in-editor notepad for text, code, JSON, and CSV files. |
 | Content validation | `ValidatorX` | A Data Validation dashboard with switchable Blueprint and Material validators. |
@@ -31,6 +32,8 @@ ToolsProject is an Unreal Engine 5.5 editor tooling workspace built around stand
 | `ContentBrowserToolkit` | Editor plugin | Adds custom Content Browser front-end filters and cached Asset Registry audit helpers. |
 | `DataAssetManager` | Editor plugin | Adds a full Data Asset management window and supporting services. |
 | `OutlinerToolkit` | Editor plugin | Extends Scene Outliner with extra columns, filters, context actions, and audit tooling. |
+| `PerformanceInspectorRuntime` | Runtime plugin | Records frame, thread, input, RHI, and GPU timing captures from runtime sessions. |
+| `PerformanceInspectorEditor` | Editor plugin | Adds the Performance Inspector Slate panel, Level Editor toolbar entry, saved-session viewer, and PIE automation hooks. |
 | `TextureChannelPacker` | Editor plugin | Adds texture channel packing, repacking, unpacking, preview, and preset tooling. |
 | `UNotepad` | Editor plugin | Adds a tabbed source/text editor directly inside the Unreal Editor. |
 | `ValidatorX` | Editor plugin | Adds configurable validation tooling on top of Unreal's Data Validation system. |
@@ -304,6 +307,78 @@ This plugin is useful when the team wants Content Browser cleanup and review che
 - Per-criterion severity overrides.
 - Persistent ignored audit issue keys.
 
+### PerformanceInspector
+![PerformanceInspectorIcon](Plugins/PerformanceInspector/PerformanceInspector/Resources/Icon128.png)
+
+`PerformanceInspector` provides runtime and editor-side performance capture tools. It can monitor live `stat unit` style timing data in a Slate panel, record capture sessions, add gameplay or automation markers, export reports, and evaluate sessions against performance thresholds for PIE or command-line automation.
+
+**Entry points**
+
+- Toolbar: `Performance Inspector` button in the Level Editor toolbar
+- Window: `Performance Inspector` Nomad tab
+- Shortcut: `Shift + Q`
+- Settings: `Project Settings -> Plugins -> Performance Inspector`
+- Blueprint API: `Performance Capture` functions from `UPerformanceCaptureBlueprintLibrary`
+- Command line: `-PerformanceInspectorAutoCapture`
+
+**Live graph**
+
+- Display frame, game thread, render thread, input latency, RHI, and GPU frame-time series.
+- Pause and resume the live view.
+- Clear live samples.
+- Switch history length between `100`, `300`, and `1000` samples.
+- Toggle automatic graph scaling.
+- Focus all metrics or isolate frame, game, render, RHI, or GPU series.
+- Configure visibility per metric series.
+- Apply `60 FPS Budget`, `30 FPS Budget`, or unlocked budget presets.
+- Configure per-series millisecond budgets.
+- Highlight budget lines and over-budget metric values.
+
+**Capture workflow**
+
+- Start and stop manual recording from the editor panel.
+- Save capture data under `Saved/PerformanceCaptures`.
+- Export full sample data to CSV and JSON.
+- Export summary reports to CSV and JSON.
+- Export event markers to CSV and JSON.
+- Optionally render summary PNG reports.
+- Open the capture folder or the last capture JSON from the panel.
+- Load saved JSON sessions back into the graph.
+- Zoom, pan, fit, and return from saved-session view to live view.
+- Select a saved-session sample range and export a summary for the selected range.
+
+**Runtime and Blueprint API**
+
+- `UPerformanceCaptureSubsystem` is a `UGameInstanceSubsystem` that records runtime capture samples.
+- Start untimed or timed capture sessions.
+- Stop a session and receive an `FPerformanceCaptureReport`.
+- Query active state, sample count, duration, and the last report.
+- Add event markers with name, category, details, severity, and display color.
+- Use threshold settings for average FPS, average frame time, average thread times, input latency, RHI time, and peak timing limits.
+- Report the dominant bottleneck as CPU Game, CPU Render, CPU RHI, GPU, or Unknown.
+
+**PIE and command-line automation**
+
+- Auto-start captures when PIE begins.
+- Stop captures automatically when PIE ends.
+- Run command-line captures with `-PerformanceInspectorAutoCapture`.
+- Override command-line duration with `-PerformanceInspectorCaptureDuration=`.
+- Override threshold values with flags such as `-PerformanceInspectorMinAverageFPS=`, `-PerformanceInspectorMaxAverageFrameTimeMs=`, `-PerformanceInspectorMaxAverageGameThreadTimeMs=`, `-PerformanceInspectorMaxAverageRenderThreadTimeMs=`, `-PerformanceInspectorMaxAverageInputLatencyTimeMs=`, and `-PerformanceInspectorMaxAverageRHITTimeMs=`.
+- Override peak limits with `-PerformanceInspectorMaxPeakFrameTimeMs=`, `-PerformanceInspectorMaxPeakGameThreadTimeMs=`, `-PerformanceInspectorMaxPeakRenderThreadTimeMs=`, `-PerformanceInspectorMaxPeakInputLatencyTimeMs=`, and `-PerformanceInspectorMaxPeakRHITTimeMs=`.
+- Request process exit on completion with `-PerformanceInspectorExitOnComplete`.
+- Request a failing process exit code when thresholds fail with `-PerformanceInspectorFailOnThresholdFailure`.
+
+**Settings**
+
+- Enable or disable PIE auto capture.
+- Configure PIE capture duration and thresholds.
+- Stop active captures when PIE ends.
+- Enable command-line auto capture defaults.
+- Configure default command-line duration and thresholds.
+- Enable process exit after command-line capture completion.
+- Enable failing exit codes for threshold failures.
+- Enable optional summary PNG export.
+
 ### TextureChannelPacker
 ![TextureChannelPacker](Plugins/TextureChannelPacker/Resources/TextureChannelPackerImage.jpg)
 `TextureChannelPacker` is a compact editor window for building packed mask textures from existing texture assets. It supports common RGB/A channel workflows such as ORM packing, packed texture repacking, single-channel unpacking, and copying channels into a new output texture.
@@ -489,6 +564,7 @@ Most established plugins have a dedicated automation test module:
 | `ContentBrowserToolkit` | Not added yet |
 | `DataAssetManager` | `DataAssetManagerTests` |
 | `OutlinerToolkit` | `OutlinerToolkitTests` |
+| `PerformanceInspector` | `PerformanceInspectorRuntime` |
 | `TextureChannelPacker` | Not added yet |
 | `UNotepad` | `UNotepadTests` |
 | `ValidatorX` | `ValidatorXTests` |
@@ -512,6 +588,7 @@ Other available plugin test filters:
 - `Automation RunTests CppTemplateGenerator`
 - `Automation RunTests DataAssetManager`
 - `Automation RunTests OutlinerToolkit`
+- `Automation RunTests PerformanceInspector`
 - `Automation RunTests UNotepad`
 - `Automation RunTests ValidatorX`
 
@@ -524,6 +601,8 @@ ToolsProject/
     ContentBrowserToolkit/
     DataAssetManager/
     OutlinerToolkit/
+    PerformanceInspector/
+      PerformanceInspector/
     TextureChannelPacker/
     UNotepad/
     ValidatorX/
