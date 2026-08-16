@@ -1,0 +1,30 @@
+Materials[1] = { Material3'Materials/M_Glass.M_Glass' }
+SourceModels[1] =
+{
+    SourceModels[0] =
+    {
+        StaticMeshDescriptionBulkData = StaticMeshDescriptionBulkData'Props/SM_GlassWindow.StaticMeshDescriptionBulkData_0'
+        BuildSettings = { bRecomputeNormals=true, bRecomputeTangents=true }
+    }
+}
+StaticMaterials[1] =
+{
+    StaticMaterials[0] =
+    {
+        MaterialInterface = Material3'Materials/M_Glass.M_Glass'
+        MaterialSlotName = M_Glass
+        UVChannelData =
+        {
+            bInitialized = true
+            bOverrideDensities = true
+            LocalUVDensities[4] = { 305.067, 0, 0, 0 }
+        }
+    }
+}
+Sockets[0] = {}
+ExtendedBounds =
+{
+    Origin = { X=-2.17557e-06, Y=-50, Z=100 }
+    BoxExtent = { X=1, Y=50, Z=100 }
+    SphereRadius = 111.66
+}

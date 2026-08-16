@@ -161,11 +161,7 @@ bool FValidatorXNodeUtilityVariableNodesTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(
-	FValidatorXNodeUtilityBranchAndCallableNodesTest,
-	"ValidatorX.Utils.Node.BranchAndCallableNodes",
-	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-
+IMPLEMENT_SIMPLE_AUTOMATION_TEST( FValidatorXNodeUtilityBranchAndCallableNodesTest, "ValidatorX.Utils.Node.BranchAndCallableNodes", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FValidatorXNodeUtilityBranchAndCallableNodesTest::RunTest(const FString& Parameters)
 {
 	using namespace ValidatorX::Tests;
@@ -173,7 +169,7 @@ bool FValidatorXNodeUtilityBranchAndCallableNodesTest::RunTest(const FString& Pa
 	UBlueprint* Blueprint = NewTransientBlueprint(TEXT("ValidatorX_CallableUtilityBlueprint"));
 	UEdGraph* Graph = AddGraph(Blueprint, Blueprint->UbergraphPages, TEXT("EventGraph"));
 
-	UK2Node_IfThenElse* Branch = AddNode<UK2Node_IfThenElse>(Graph);
+	const UK2Node_IfThenElse* Branch = AddNode<UK2Node_IfThenElse>(Graph);
 	TestTrue(TEXT("Branch with unlinked Then/Else pins has all branch execs disconnected"), UBPUtilsNodeFunctionLibrary::AreAllBranchExecsDisconnected(Branch));
 
 	UEdGraphNode* BranchTarget = AddNode<UEdGraphNode>(Graph);
