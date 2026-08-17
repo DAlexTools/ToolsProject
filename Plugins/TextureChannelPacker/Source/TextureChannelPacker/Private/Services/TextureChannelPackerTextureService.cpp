@@ -6,9 +6,11 @@
 #include "Engine/Texture2D.h"
 #include "Logging/LogMacros.h"
 #include "Math/Float16.h"
+#include "Misc/PackageName.h"
 #include "Misc/ScopedSlowTask.h"
 #include "ScopedTransaction.h"
 #include "Services/TextureChannelPackerPathService.h"
+#include "UObject/SavePackage.h"
 
 #define LOCTEXT_NAMESPACE "TextureChannelPackerTextureService"
 
@@ -557,6 +559,38 @@ namespace TextureChannelPackerTexture
 #endif
 	}
 
+	static bool SaveTexturePackage(UTexture2D* Texture, FText& OutError)
+	{
+		if (!Texture)
+		{
+			OutError = LOCTEXT("SaveMissingTexture", "Could not save the generated texture because the texture object is invalid.");
+			return false;
+		}
+
+		UPackage* Package = Texture->GetOutermost();
+		if (!Package)
+		{
+			OutError = FText::Format(LOCTEXT("SaveMissingPackage", "Could not resolve the package for texture '{0}'."), FText::FromString(Texture->GetName()));
+			return false;
+		}
+
+		const FString PackageFileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
+
+		FSavePackageArgs SaveArgs;
+		SaveArgs.TopLevelFlags = EObjectFlags::RF_Public | EObjectFlags::RF_Standalone;
+		SaveArgs.Error = GError;
+		SaveArgs.SaveFlags = SAVE_NoError;
+		SaveArgs.bWarnOfLongFilename = false;
+
+		if (!UPackage::SavePackage(Package, Texture, *PackageFileName, SaveArgs))
+		{
+			OutError = FText::Format(LOCTEXT("SavePackageFailed", "Could not save generated texture package: {0}"), FText::FromString(PackageFileName));
+			return false;
+		}
+
+		return true;
+	}
+
 	static UTexture2D* CreateTextureAsset(const FString& OutputPackagePath, const FString& AssetName, const int32 Width, const int32 Height, const ETextureSourceFormat OutputFormat,
 										  const TArray<FResolvedOutputChannel>& Channels, const FTextureChannelPackerOutputSettings& Settings, FText& OutError)
 	{
@@ -592,11 +626,17 @@ namespace TextureChannelPackerTexture
 		}
 
 		ApplyTextureSettings(Texture, Settings);
-		Texture->UpdateResource();
 		Texture->PostEditChange();
+		Texture->UpdateResource();
 
+		Texture->MarkPackageDirty();
 		Package->MarkPackageDirty();
 		FAssetRegistryModule::AssetCreated(Texture);
+		if (!SaveTexturePackage(Texture, OutError))
+		{
+			return nullptr;
+		}
+
 		return Texture;
 	}
 
@@ -604,15 +644,21 @@ namespace TextureChannelPackerTexture
 	{
 		OutChannels.Reset();
 		OutFirstSourceSize = FIntPoint::ZeroValue;
+		bool bHasSourceTexture = false;
+		bool bHasExplicitNonDefaultConstant = false;
 
 		for (const FTextureChannelPackerMapping& Mapping : Mappings)
 		{
 			FResolvedOutputChannel ResolvedChannel;
 			ResolvedChannel.OutputChannel = Mapping.OutputChannel;
-			ResolvedChannel.bUseConstant = Mapping.Source.bUseConstant || !Mapping.Source.Texture.IsValid();
+			ResolvedChannel.bUseConstant = Mapping.Source.bUseConstant;
 			ResolvedChannel.ConstantValue = Mapping.Source.ConstantValue;
 
-			if (!ResolvedChannel.bUseConstant)
+			if (ResolvedChannel.bUseConstant)
+			{
+				bHasExplicitNonDefaultConstant |= Mapping.OutputChannel != ETextureChannelPackerChannel::Alpha || Mapping.Source.ConstantValue != 255;
+			}
+			else if (Mapping.Source.Texture.IsValid())
 			{
 				if (!ReadTextureChannel(Mapping.Source.Texture.Get(), Mapping.Source.Channel, ResolvedChannel.Data, OutError))
 				{
@@ -620,6 +666,7 @@ namespace TextureChannelPackerTexture
 				}
 
 				ResolvedChannel.bHasData = true;
+				bHasSourceTexture = true;
 				if (OutFirstSourceSize == FIntPoint::ZeroValue)
 				{
 					OutFirstSourceSize = FIntPoint(ResolvedChannel.Data.Width, ResolvedChannel.Data.Height);
@@ -627,6 +674,12 @@ namespace TextureChannelPackerTexture
 			}
 
 			OutChannels.Add(MoveTemp(ResolvedChannel));
+		}
+
+		if (!bHasSourceTexture && !bHasExplicitNonDefaultConstant)
+		{
+			OutError = LOCTEXT("NoSourceChannels", "Select at least one source texture or set a non-alpha Const value before generating.");
+			return false;
 		}
 
 		return true;
@@ -796,7 +849,7 @@ namespace TextureChannelPackerTexture
 
 		Result.bSuccess = true;
 		Result.CreatedTextures.Add(Texture);
-		Result.Message = FText::Format(LOCTEXT("CreatedTexture", "Created texture: {0}"), FText::FromString(Texture->GetPathName()));
+		Result.Message = FText::Format(LOCTEXT("CreatedAndSavedTexture", "Created and saved texture: {0}"), FText::FromString(Texture->GetPathName()));
 		return Result;
 	}
 
@@ -860,7 +913,7 @@ namespace TextureChannelPackerTexture
 		}
 
 		Result.bSuccess = Result.CreatedTextures.Num() > 0;
-		Result.Message = FText::Format(LOCTEXT("CreatedTextures", "Created {0} texture asset(s)."), FText::AsNumber(Result.CreatedTextures.Num()));
+		Result.Message = FText::Format(LOCTEXT("CreatedAndSavedTextures", "Created and saved {0} texture asset(s)."), FText::AsNumber(Result.CreatedTextures.Num()));
 		return Result;
 	}
 
