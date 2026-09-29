@@ -82,7 +82,7 @@ public:
 	 * @return A reply indicating how the event was handled.
 	 */
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
-
+	UE_DEPRECATED
 private:
 	/**
 	 * @brief Handles changes to the row's checkbox state.
@@ -136,7 +136,7 @@ private:
 	 * @return A shared reference to the widget containing the enable/disable checkbox.
 	 */
 	[[nodiscard]] TSharedRef<SBox> GetButtonBox();
-
+	
 	/**
 	 * @brief Retrieves the current state of the row's checkbox.
 	 *

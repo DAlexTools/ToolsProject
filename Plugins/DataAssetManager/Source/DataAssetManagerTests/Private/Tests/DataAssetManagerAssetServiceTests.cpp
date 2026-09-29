@@ -5,7 +5,10 @@
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "DeveloperSettings/DataAssetManagerSettings.h"
+#include "Engine/World.h"
+#include "Materials/Material.h"
 #include "Misc/AutomationTest.h"
+#include "Misc/ScopeExit.h"
 #include "Modules/ModuleManager.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -43,6 +46,9 @@ void FDataAssetManagerAssetServiceTest::GetTests(TArray<FString>& OutBeautifiedN
 	OutBeautifiedNames.Add(TEXT("SaveRenameDuplicateMoveDelete"));
 	OutTestCommands.Add(TEXT("SaveRenameDuplicateMoveDelete"));
 
+	OutBeautifiedNames.Add(TEXT("SaveAllOnlySavesDirtyDataAssetsInScope"));
+	OutTestCommands.Add(TEXT("SaveAllOnlySavesDirtyDataAssetsInScope"));
+
 	OutBeautifiedNames.Add(TEXT("ValidateInspectAndDiff"));
 	OutTestCommands.Add(TEXT("ValidateInspectAndDiff"));
 
@@ -52,6 +58,84 @@ void FDataAssetManagerAssetServiceTest::GetTests(TArray<FString>& OutBeautifiedN
 
 bool FDataAssetManagerAssetServiceTest::RunTest(const FString& Parameters)
 {
+	if (Parameters == TEXT("SaveAllOnlySavesDirtyDataAssetsInScope"))
+	{
+		using namespace DataAssetManagerTests;
+		FScopedTestDataAsset First(MakeUniqueAssetName(TEXT("SaveAllFirst")));
+		FScopedTestDataAsset Second(MakeUniqueAssetName(TEXT("SaveAllSecond")));
+		FScopedTestDataAsset OutsideScope(MakeUniqueAssetName(TEXT("SaveAllOutside")));
+		FScopedTestDataAsset Clean(MakeUniqueAssetName(TEXT("SaveAllClean")));
+		if (!TestNotNull(TEXT("First asset created"), First.GetAsset())
+			|| !TestNotNull(TEXT("Second asset created"), Second.GetAsset())
+			|| !TestNotNull(TEXT("Outside asset created"), OutsideScope.GetAsset())
+			|| !TestNotNull(TEXT("Clean asset created"), Clean.GetAsset()))
+		{
+			return false;
+		}
+
+		// Track the initial files in the scoped fixtures so teardown also removes saved packages.
+		if (!TestTrue(TEXT("First baseline package saved"), First.Save())
+			|| !TestTrue(TEXT("Second baseline package saved"), Second.Save()))
+		{
+			return false;
+		}
+		First.GetAssetAs<UTestDataAsset>()->TestProperty = 11;
+		Second.GetAssetAs<UTestDataAsset>()->TestProperty = 22;
+
+		const FString MaterialName = MakeUniqueAssetName(TEXT("SaveAllMaterial"));
+		UPackage* MaterialPackage = CreatePackage(*(TestRootPath / MaterialName));
+		UMaterial* Material = NewObject<UMaterial>(MaterialPackage, *MaterialName, RF_Public | RF_Standalone);
+		const FString MapName = MakeUniqueAssetName(TEXT("SaveAllMap"));
+		UPackage* MapPackage = CreatePackage(*(TestRootPath / MapName));
+		MapPackage->SetPackageFlags(PKG_ContainsMap);
+		UWorld* World = NewObject<UWorld>(MapPackage, *MapName, RF_Public | RF_Standalone);
+		const auto PackageFilename = [](const UObject* Object, const FString& Extension)
+		{
+			return FPackageName::LongPackageNameToFilename(Object->GetOutermost()->GetName(), Extension);
+		};
+		const FString MaterialFilename = PackageFilename(Material, FPackageName::GetAssetPackageExtension());
+		const FString MapFilename = PackageFilename(World, FPackageName::GetMapPackageExtension());
+		ON_SCOPE_EXIT
+		{
+			MaterialPackage->SetDirtyFlag(false);
+			MapPackage->SetDirtyFlag(false);
+			Material->ClearFlags(RF_Public | RF_Standalone);
+			World->ClearFlags(RF_Public | RF_Standalone);
+			Material->MarkAsGarbage();
+			World->MarkAsGarbage();
+			IFileManager::Get().Delete(*MaterialFilename);
+			IFileManager::Get().Delete(*MapFilename);
+		};
+
+		First.GetAsset()->MarkPackageDirty();
+		Second.GetAsset()->MarkPackageDirty();
+		OutsideScope.GetAsset()->MarkPackageDirty();
+		MaterialPackage->SetDirtyFlag(true);
+		MapPackage->SetDirtyFlag(true);
+		Clean.GetAsset()->GetOutermost()->SetDirtyFlag(false);
+
+		const TArray<TSharedPtr<FAssetData>> Scope = {
+			First.MakeSharedAssetData(), Second.MakeSharedAssetData(), Clean.MakeSharedAssetData(),
+			First.MakeSharedAssetData(), nullptr, MakeShared<FAssetData>(),
+			MakeShared<FAssetData>(Material), MakeShared<FAssetData>(World)
+		};
+		TestTrue(TEXT("Save All succeeds for the complete scope"), FDataAssetManagerAssetService::SaveAllDataAssets(Scope));
+		TestFalse(TEXT("First Data Asset is saved"), First.GetAsset()->GetOutermost()->IsDirty());
+		TestFalse(TEXT("Second Data Asset is saved"), Second.GetAsset()->GetOutermost()->IsDirty());
+		TestTrue(TEXT("First package exists on disk"), IFileManager::Get().FileExists(*PackageFilename(First.GetAsset(), FPackageName::GetAssetPackageExtension())));
+		TestTrue(TEXT("Second package exists on disk"), IFileManager::Get().FileExists(*PackageFilename(Second.GetAsset(), FPackageName::GetAssetPackageExtension())));
+		TestTrue(TEXT("Data Asset outside scope stays dirty"), OutsideScope.GetAsset()->GetOutermost()->IsDirty());
+		TestTrue(TEXT("Non-Data Asset stays dirty even if passed in scope"), MaterialPackage->IsDirty());
+		TestTrue(TEXT("Map stays dirty even if passed in scope"), MapPackage->IsDirty());
+		TestFalse(TEXT("Outside Data Asset is not written"), IFileManager::Get().FileExists(*PackageFilename(OutsideScope.GetAsset(), FPackageName::GetAssetPackageExtension())));
+		TestFalse(TEXT("Clean Data Asset is not written"), IFileManager::Get().FileExists(*PackageFilename(Clean.GetAsset(), FPackageName::GetAssetPackageExtension())));
+		TestFalse(TEXT("Material is not written"), IFileManager::Get().FileExists(*MaterialFilename));
+		TestFalse(TEXT("Map is not written"), IFileManager::Get().FileExists(*MapFilename));
+		TestTrue(TEXT("No dirty eligible assets is a successful no-op"), FDataAssetManagerAssetService::SaveAllDataAssets(Scope));
+		TestTrue(TEXT("Empty scope is a successful no-op"), FDataAssetManagerAssetService::SaveAllDataAssets({}));
+		TestTrue(TEXT("Empty scope does not save outside assets"), OutsideScope.GetAsset()->GetOutermost()->IsDirty());
+	}
+
 	if (Parameters == TEXT("InvalidInputs"))
 	{
 		TArray<TSharedPtr<FAssetData>> DataAssets = { MakeShared<FAssetData>() };

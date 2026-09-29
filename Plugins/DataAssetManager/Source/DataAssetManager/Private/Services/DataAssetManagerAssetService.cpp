@@ -8,7 +8,6 @@
 #include "AssetRegistry/IAssetRegistry.h"
 #include "DeveloperSettings/DataAssetManagerSettings.h"
 #include "Engine/DataAsset.h"
-#include "FileHelpers.h"
 #include "FunctionLibrary/DataAssetManagerFunctionLibrary.h"
 #include "IAssetTools.h"
 #include "Interfaces/IPluginManager.h"
@@ -493,16 +492,38 @@ bool FDataAssetManagerAssetService::DeleteAssets(const TArray<TSharedPtr<FAssetD
 	return DataAssetManager::DeleteMultiplyAsset(ToAssetDataArray(AssetDataList), bShowConfirmation);
 }
 
-bool FDataAssetManagerAssetService::SaveAllDataAssets()
+bool FDataAssetManagerAssetService::SaveAllDataAssets(const TArray<TSharedPtr<FAssetData>>& AssetDataList)
 {
-	constexpr bool bPromptUserToSave = false;
-	constexpr bool bSaveMapPackages = true;
-	constexpr bool bSaveContentPackages = true;
-	constexpr bool bFastSave = false;
-	constexpr bool bNotifyNoPackagesSaved = false;
-	constexpr bool bCanBeDeclined = false;
+	bool bAllSaved = true;
+	TSet<FName> ProcessedPackages;
+	for (const TSharedPtr<FAssetData>& AssetData : AssetDataList)
+	{
+		if (!AssetData.IsValid() || !AssetData->IsValid() || ProcessedPackages.Contains(AssetData->PackageName))
+		{
+			continue;
+		}
 
-	return FEditorFileUtils::SaveDirtyPackages(bPromptUserToSave, bSaveMapPackages, bSaveContentPackages, bFastSave, bNotifyNoPackagesSaved, bCanBeDeclined);
+		// Unloaded packages cannot have unsaved edits. Do not load the whole scan scope.
+		const UPackage* Package = FindPackage(nullptr, *AssetData->PackageName.ToString());
+		if (!Package || !Package->IsDirty() || Package->HasAnyPackageFlags(PKG_ContainsMap))
+		{
+			continue;
+		}
+
+		if (!Cast<UDataAsset>(AssetData->GetAsset()))
+		{
+			continue;
+		}
+
+		ProcessedPackages.Add(AssetData->PackageName);
+		if (!SaveAsset(AssetData))
+		{
+			bAllSaved = false;
+			UE_LOG(SDataAssetManagerLog, Warning, TEXT("Failed to save Data Asset package: %s"), *AssetData->PackageName.ToString());
+		}
+	}
+
+	return bAllSaved;
 }
 
 FDataAssetValidationResults FDataAssetManagerAssetService::ValidateAssets(const TArray<TSharedPtr<FAssetData>>& AssetDataList, bool bOpenMessageLog)

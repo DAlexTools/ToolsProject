@@ -73,10 +73,11 @@ public:
 	static bool DeleteAssets(const TArray<TSharedPtr<FAssetData>>& AssetDataList, bool bShowConfirmation = false);
 
 	/**
-	 * @brief Saves all dirty map and content packages without prompting the user.
-	 * @return true when the save-all operation succeeds.
+	 * @brief Saves dirty Data Asset packages from the manager's complete, unfiltered asset list.
+	 * @param AssetDataList Assets in the manager's scan scope. Null entries, non-Data Assets and map packages are ignored.
+	 * @return true if every eligible dirty package was saved, including when nothing needed saving.
 	 */
-	static bool SaveAllDataAssets();
+	static bool SaveAllDataAssets(const TArray<TSharedPtr<FAssetData>>& AssetDataList);
 
 	/**
 	 * @brief Runs data validation for the supplied Data Assets.

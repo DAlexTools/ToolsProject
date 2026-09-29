@@ -24,7 +24,6 @@
 #include "DeveloperSettings/DataAssetManagerSettings.h"
 #include "Editor/UnrealEd/Classes/Factories/DataAssetFactory.h"
 #include "Filters/SFilterSearchBox.h"
-#include "FileHelpers.h"
 #include "IAssetTools.h"
 #include "IContentBrowserSingleton.h"
 #include "ISettingsModule.h"
@@ -2554,14 +2553,7 @@ bool SDataAssetManagerWidget::CanOpenSelectedAssetsInPropertyEditor() const
 
 bool SDataAssetManagerWidget::SaveAllDataAsset()
 {
-	constexpr bool bPromptUserToSave = false;
-	constexpr bool bSaveMapPackages = true;
-	constexpr bool bSaveContentPackages = true;
-	constexpr bool bFastSave = false;
-	constexpr bool bNotifyNoPackagesSaved = false;
-	constexpr bool bCanBeDeclined = false;
-
-	return FEditorFileUtils::SaveDirtyPackages(bPromptUserToSave, bSaveMapPackages, bSaveContentPackages, bFastSave, bNotifyNoPackagesSaved, bCanBeDeclined);
+	return FDataAssetManagerAssetService::SaveAllDataAssets(AssetManagerData.DataAssets);
 }
 
 void SDataAssetManagerWidget::UpdateComboButtonContent()
